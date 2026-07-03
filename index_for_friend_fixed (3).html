@@ -1,0 +1,2708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Asset Inventory</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f5f5;--surface:#fff;--border:#e0e0e0;--border2:#c4c4c4;
+  --text:#141414;--text2:#5a5a5a;--text3:#8c8c8c;
+  --primary:#C8102E;--primary-d:#8E0B20;--primary-light:#FBE4E7;
+  --success:#2d7a0f;--success-light:#eaf3de;
+  --warning:#854F0B;--warning-light:#faeeda;
+  --danger:#C8102E;--danger-light:#FBE4E7;
+  --gray:#5a5a5a;--gray-light:#ececec;
+  --sidebar-w:240px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:var(--text);background:var(--bg)}
+
+/* ── LOGIN ── */
+.login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d0d0d 0%,#3a0d12 50%,#141414 100%);position:relative;overflow:hidden}
+.login-bg-layer{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0;opacity:0;transition:opacity .6s ease}
+.login-bg-layer.show{opacity:1}
+.login-bg-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(13,13,13,.9) 0%,rgba(58,13,18,.84) 50%,rgba(20,20,20,.92) 100%);z-index:1}
+.login-box{position:relative;z-index:2;background:#fff;border-radius:18px;padding:44px 40px;width:400px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.login-logo-img{width:64px;height:64px;border-radius:16px;object-fit:contain;margin-bottom:14px;box-shadow:0 8px 24px rgba(200,16,46,.35);background:#fff;padding:4px}
+.login-box{background:#fff;border-radius:18px;padding:44px 40px;width:400px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.35)}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo-wrap{width:64px;height:64px;background:var(--primary);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:32px;margin-bottom:14px;box-shadow:0 8px 24px rgba(200,16,46,.35)}
+.login-logo h1{font-size:22px;font-weight:700}
+.login-logo p{font-size:13px;color:var(--text2);margin-top:4px}
+.login-addr{font-size:11px;color:var(--text3);margin-top:5px;display:flex;align-items:center;justify-content:center;gap:4px}
+.lf-group{margin-bottom:18px}
+.lf-group label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.lf-input-wrap{position:relative}
+.lf-input-wrap i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:18px}
+.lf-input{width:100%;height:46px;border:1.5px solid var(--border2);border-radius:10px;padding:0 14px 0 40px;font-size:14px;color:var(--text);outline:none;transition:border .15s,box-shadow .15s}
+.lf-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,.12)}
+.login-btn{width:100%;height:46px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:6px;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-btn:hover{background:var(--primary-d)}
+.login-err{background:#fcebeb;color:#a32d2d;border:1px solid #f7c1c1;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none;align-items:center;gap:6px}
+.login-err.show{display:flex}
+
+/* ── APP SHELL ── */
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);background:#141414;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-header{padding:16px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sidebar-logo-img{width:38px;height:38px;border-radius:9px;object-fit:cover;flex-shrink:0}
+.sidebar-logo-placeholder{width:38px;height:38px;border-radius:9px;background:var(--primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
+.sidebar-logo-text{font-size:13px;font-weight:700;color:#fff;line-height:1.3}
+.sidebar-logo-sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:1px}
+.sidebar-section{padding:14px 14px 4px;font-size:9px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em}
+.sidebar-item{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;border-radius:8px;margin:1px 8px;font-size:13px;color:rgba(255,255,255,.65);transition:all .15s}
+.sidebar-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar-item.active{background:rgba(200,16,46,.55);color:#fff;font-weight:600}
+.sidebar-item i{font-size:17px;width:20px;flex-shrink:0}
+.co-badge{margin-left:auto;font-size:11px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);padding:1px 7px;border-radius:20px}
+.co-badge.active-co{background:rgba(200,16,46,.6);color:#fff}
+.sidebar-footer{padding:12px 14px;border-top:1px solid rgba(255,255,255,.08);margin-top:auto}
+.user-card{display:flex;align-items:center;gap:9px}
+.user-av{width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.user-name-s{font-size:12px;font-weight:600;color:#fff;line-height:1.3}
+.user-role-s{font-size:10px;color:rgba(255,255,255,.5)}
+.rbadge{display:inline-block;padding:1px 7px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase}
+.rbadge-admin{background:rgba(200,16,46,.4);color:#8ab8e8}
+.rbadge-junior{background:rgba(45,122,15,.4);color:#8bc34a}
+
+/* ── TOPBAR ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:12px;height:56px;flex-shrink:0}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.topbar-logo-img{height:36px;width:auto;border-radius:6px;object-fit:contain}
+.topbar-logo-placeholder{font-size:22px;color:var(--primary)}
+.topbar-title{font-size:15px;font-weight:700;flex:1}
+.topbar-clock{font-size:13px;font-weight:600;color:var(--text2);background:var(--bg);padding:5px 12px;border-radius:8px;border:1px solid var(--border);white-space:nowrap;min-width:180px;text-align:center}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:var(--primary-d);border-color:var(--primary-d)}
+.btn-success{background:var(--success);color:#fff;border-color:var(--success)}
+.btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn-danger:hover{background:#7f1d1d}
+.btn-sm{padding:4px 9px;font-size:12px}
+.btn-icon{padding:5px 8px}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+
+/* ── CONTENT ── */
+.content{flex:1;overflow-y:auto;padding:20px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;font-size:18px}
+.si-blue{background:var(--primary-light);color:var(--primary)}
+.si-green{background:var(--success-light);color:var(--success)}
+.si-orange{background:var(--warning-light);color:var(--warning)}
+.si-red{background:var(--danger-light);color:var(--danger)}
+.si-gray{background:var(--gray-light);color:var(--gray)}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.stat-value{font-size:26px;font-weight:700;line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:3px}
+
+/* ── CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px}
+.card-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.card-title{font-size:14px;font-weight:700;flex:1}
+
+/* ── FILTERS ── */
+.filters{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--border);align-items:center}
+input,select,textarea{border:1px solid var(--border2);border-radius:7px;padding:0 10px;font-size:13px;background:var(--surface);color:var(--text);outline:none;height:34px;font-family:inherit;transition:border .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(200,16,46,.1)}
+textarea{height:auto;padding:8px 10px;resize:vertical}
+.srch-wrap{position:relative}
+.srch-wrap i{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;pointer-events:none}
+.srch-input{padding-left:32px!important;min-width:220px}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8fafc;padding:9px 10px;text-align:left;font-weight:700;font-size:11px;color:var(--text2);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.clickable-row:hover td{background:#f0f7ff;cursor:pointer}
+.actions-cell{display:flex;gap:4px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%}
+.badge-free{background:var(--success-light);color:var(--success)}
+.badge-free::before{background:var(--success)}
+.badge-allotted{background:var(--primary-light);color:var(--primary)}
+.badge-allotted::before{background:var(--primary)}
+.badge-repair{background:var(--warning-light);color:var(--warning)}
+.badge-repair::before{background:var(--warning)}
+.badge-retired{background:var(--gray-light);color:var(--gray)}
+.badge-retired::before{background:var(--gray)}
+.tag-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:600}
+.tag-normal{background:#e8f0fe;color:#3c5cc0}
+.tag-led{background:#fff0e0;color:#c05c00;border:1px solid #f0c080}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+.modal{background:var(--surface);border-radius:14px;border:1px solid var(--border);width:700px;max-width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.2)}
+.modal-sm{width:440px}
+.modal-lg{width:860px}
+.modal-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-hicon{width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.modal-title{font-size:15px;font-weight:700;flex:1}
+.modal-body{padding:20px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;position:sticky;bottom:0;background:var(--surface)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fg.full{grid-column:1/-1}
+.fg label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.03em}
+.fg input,.fg select,.fg textarea{width:100%}
+.fn{font-size:11px;color:var(--text3)}
+.section-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+
+/* ── ASSET DETAIL MODAL ── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.detail-item{padding:10px 14px;border-bottom:1px solid var(--border)}
+.detail-item:nth-child(odd){border-right:1px solid var(--border)}
+.detail-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.detail-value{font-size:14px;font-weight:500;color:var(--text)}
+.detail-value.empty{color:var(--text3);font-style:italic;font-weight:400}
+.detail-full{grid-column:1/-1;border-right:none}
+
+/* ── USERS ── */
+.user-list{display:flex;flex-direction:column;gap:8px}
+.user-row{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--bg);border-radius:9px;border:1px solid var(--border)}
+.user-av-sm{width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.user-rinfo{flex:1}
+.user-rname{font-weight:700;font-size:13px}
+.user-run{font-size:12px;color:var(--text2);margin-top:1px}
+
+/* ── SUMMARY ── */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.sum-card-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sum-card-body{padding:14px 16px}
+.co-logo-sm{width:36px;height:36px;border-radius:8px;object-fit:cover}
+.co-logo-ph{width:36px;height:36px;border-radius:8px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px}
+.type-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.type-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:var(--bg);border:1px solid var(--border);font-size:12px}
+.chip-count{font-weight:700;color:var(--primary)}
+
+/* ── SETTINGS ── */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.settings-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.logo-preview{width:80px;height:80px;border-radius:10px;object-fit:contain;border:1px solid var(--border);background:var(--bg)}
+.logo-ph{width:80px;height:80px;border-radius:10px;border:2px dashed var(--border2);background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:28px;cursor:pointer}
+
+/* ── MISC ── */
+.ticker-bar{display:flex;align-items:center;background:#141414;border-bottom:2px solid var(--primary);height:34px;flex-shrink:0;overflow:hidden}
+.ticker-label{display:flex;align-items:center;gap:5px;background:var(--primary);color:#fff;padding:0 14px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;height:100%;flex-shrink:0;white-space:nowrap}
+.ticker-track-wrap{flex:1;overflow:hidden;position:relative;height:100%}
+.ticker-track-wrap::before{content:'';position:absolute;left:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,#141414,transparent);z-index:2}
+.ticker-track-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(270deg,#141414,transparent);z-index:2}
+.ticker-track{display:flex;align-items:center;height:100%}
+.ticker-inner{display:flex;align-items:center;gap:0;animation:ticker-scroll 45s linear infinite;white-space:nowrap}
+.ticker-inner:hover{animation-play-state:paused}
+@keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ticker-item{display:inline-flex;align-items:center;gap:7px;padding:0 18px;color:#e0e0e0;font-size:12px;font-weight:500;cursor:pointer;transition:color .15s}
+.ticker-item:hover{color:#fff}
+.ticker-item i{font-size:14px}
+.ticker-item .tv{font-size:14px;font-weight:800}
+.ticker-item .tv.red{color:var(--primary)}
+.ticker-item .tv.green{color:#4caf50}
+.ticker-item .tv.orange{color:#ff9800}
+.ticker-item .tv.gray{color:#9e9e9e}
+.ticker-item .tv.teal{color:#26c6da}
+.ticker-item .tv.purple{color:#ab47bc}
+.ticker-sep{color:#333;padding:0 2px;font-size:18px;user-select:none;line-height:1}
+.notify{position:fixed;bottom:24px;right:24px;background:#141414;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:999;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.25);animation:slideup .25s ease}
+@keyframes slideup{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+.empty-state{text-align:center;padding:56px 20px;color:var(--text2)}
+.empty-state i{font-size:48px;color:var(--text3);margin-bottom:12px;display:block}
+.empty-state h3{font-size:16px;margin-bottom:6px;color:var(--text)}
+.tag-sm{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text2);font-family:monospace}
+.co-pill{display:inline-flex;align-items:center;gap:5px;background:var(--primary-light);color:var(--primary);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700}
+.divider{height:1px;background:var(--border);margin:14px 0}
+/* ── IMPORT EXCEL MODAL ── */
+.imp-drop{border:2px dashed var(--border2);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:16px}
+.imp-drop:hover,.imp-drop.drag-over{border-color:#0e7490;background:#f0fbff}
+.imp-drop-icon{font-size:40px;color:var(--text3);margin-bottom:8px}
+.imp-drop-text{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.imp-drop-sub{font-size:12px;color:var(--text3)}
+.imp-chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.imp-chip{flex:1;min-width:80px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center}
+.imp-chip-num{font-size:22px;font-weight:700;line-height:1}
+.imp-chip-lbl{font-size:11px;color:var(--text2);margin-top:3px}
+.imp-chip.c-new .imp-chip-num{color:var(--success)}
+.imp-chip.c-skip .imp-chip-num{color:var(--warning)}
+.imp-chip.c-err .imp-chip-num{color:var(--danger)}
+.imp-preview{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px}
+.imp-preview table{font-size:11px}
+.imp-preview th{font-size:10px;padding:6px 8px}
+.imp-preview td{padding:6px 8px}
+.imp-row-new td{background:#f0fff4}
+.imp-row-dup td{background:#fff8e1}
+.imp-row-err td{background:#fff0f0}
+.imp-tag{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px}
+.imp-tag-new{background:#eaf3de;color:var(--success)}
+.imp-tag-dup{background:var(--warning-light);color:var(--warning)}
+.imp-tag-err{background:var(--danger-light);color:var(--danger)}
+.imp-hint{font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;line-height:1.7}
+.imp-hint a{color:#0e7490;text-decoration:none;font-weight:600}
+.imp-hint a:hover{text-decoration:underline}
+/* ── IMPORT EXCEL MODAL ── */
+.imp-drop{border:2px dashed var(--border2);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:14px}
+.imp-drop:hover,.imp-drop.drag-over{border-color:#0e7490;background:#f0fbff}
+.imp-drop-icon{font-size:40px;color:var(--text3);margin-bottom:8px}
+.imp-drop-text{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.imp-drop-sub{font-size:12px;color:var(--text3)}
+.imp-chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.imp-chip{flex:1;min-width:80px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center}
+.imp-chip-num{font-size:22px;font-weight:700;line-height:1}
+.imp-chip-lbl{font-size:11px;color:var(--text2);margin-top:3px}
+.imp-chip.c-new .imp-chip-num{color:var(--success)}
+.imp-chip.c-skip .imp-chip-num{color:var(--warning)}
+.imp-chip.c-err .imp-chip-num{color:var(--danger)}
+.imp-preview{max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:4px}
+.imp-preview table{font-size:11px}
+.imp-preview th{font-size:10px;padding:6px 8px}
+.imp-preview td{padding:5px 8px}
+.imp-row-new td{background:#f0fff4}
+.imp-row-dup td{background:#fff8e1}
+.imp-row-err td{background:#fff0f0}
+.imp-tag{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px}
+.imp-tag-new{background:#eaf3de;color:var(--success)}
+.imp-tag-dup{background:var(--warning-light);color:var(--warning)}
+.imp-tag-err{background:var(--danger-light);color:var(--danger)}
+.imp-hint{font-size:12px;color:var(--text2);background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:14px;line-height:1.8}
+.imp-hint a{color:#0e7490;text-decoration:none;font-weight:600}
+.imp-hint a:hover{text-decoration:underline}
+/* ── EXPORT MODAL ── */
+.exp-format-row{display:flex;gap:10px;margin-bottom:18px}
+.exp-format-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface)}
+.exp-format-btn:hover{border-color:var(--primary);background:var(--primary-light)}
+.exp-format-btn.selected{border-color:var(--primary);background:var(--primary-light)}
+.exp-format-btn i{font-size:26px}
+.exp-format-btn .exp-fmt-lbl{font-size:12px;font-weight:700}
+.exp-format-btn .exp-fmt-sub{font-size:10px;color:var(--text3)}
+.exp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);margin-bottom:8px;margin-top:14px}
+.exp-filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.exp-filter-item{display:flex;flex-direction:column;gap:4px}
+.exp-filter-item label{font-size:11px;color:var(--text2);font-weight:600}
+.exp-filter-item select{height:32px;border:1px solid var(--border2);border-radius:7px;padding:0 8px;font-size:13px;background:var(--surface);color:var(--text)}
+.exp-preview-pill{display:inline-flex;align-items:center;gap:5px;background:var(--primary-light);color:var(--primary);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:600;margin-top:10px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-page" class="login-page">
+  <div id="login-bg-layer" class="login-bg-layer"></div>
+  <div id="login-bg-overlay" class="login-bg-overlay"></div>
+  <div class="login-box">
+    <div class="login-logo">
+      <div id="login-logo-wrap" class="login-logo-wrap"><i class="ti ti-device-desktop-analytics"></i></div>
+      <h1 id="lp-appname">IT Asset Inventory</h1>
+      <p id="lp-coname">Your Company</p>
+      <div class="login-addr"><i class="ti ti-map-pin" style="font-size:12px"></i><span id="lp-addr">Your Office Address Here</span></div>
+    </div>
+    <div id="login-err" class="login-err"><i class="ti ti-alert-circle"></i><span id="login-err-msg">Invalid credentials</span></div>
+    <div class="lf-group">
+      <label>Username</label>
+      <div class="lf-input-wrap"><i class="ti ti-user"></i><input type="text" id="lf-u" class="lf-input" placeholder="Enter username" autocomplete="username"></div>
+    </div>
+    <div class="lf-group">
+      <label>Password</label>
+      <div class="lf-input-wrap"><i class="ti ti-lock"></i><input type="password" id="lf-p" class="lf-input" placeholder="Enter password" autocomplete="current-password"></div>
+    </div>
+    <button class="login-btn" onclick="doLogin()"><i class="ti ti-login" style="font-size:17px"></i> Sign In</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="main-app" class="app" style="display:none">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div id="sb-logo-wrap"><div class="sidebar-logo-placeholder"><i class="ti ti-device-desktop-analytics"></i></div></div>
+      <div><div class="sidebar-logo-text" id="sb-appname">IT Inventory</div><div class="sidebar-logo-sub" id="sb-coname">Asset Management</div></div>
+    </div>
+    <div style="flex:1;padding:8px 0;overflow-y:auto">
+      <div class="sidebar-section">Navigation</div>
+      <div class="sidebar-item" id="nav-assets" onclick="UI.company='__ALL__';UI.fCompany='';setTab('assets')"><i class="ti ti-table"></i> Asset Register</div>
+      <div class="sidebar-item" id="nav-summary" onclick="setTab('summary')"><i class="ti ti-layout-dashboard"></i> Summary</div>
+      <div class="sidebar-section">Admin</div>
+      <div class="sidebar-item" id="nav-employees" onclick="setTab('employees')"><i class="ti ti-id-badge"></i> Employee Data</div>
+      <div id="admin-only-nav" style="display:none">
+        <div class="sidebar-item" id="nav-users" onclick="setTab('users')"><i class="ti ti-users"></i> User Management</div>
+        <div class="sidebar-item" id="nav-settings" onclick="setTab('settings')"><i class="ti ti-settings"></i> Settings</div>
+      </div>
+      <div class="sidebar-section" style="margin-top:4px">Companies</div>
+      <div id="co-sidebar"></div>
+      <div id="add-co-btn" class="sidebar-item" style="display:none" onclick="addCompany()"><i class="ti ti-plus"></i> Add Company</div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-av" id="sb-av">A</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name-s" id="sb-uname">Admin</div>
+          <div class="user-role-s"><span class="rbadge" id="sb-rbadge">admin</span></div>
+        </div>
+        <button class="btn btn-sm btn-icon" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);color:#fff" title="Logout" onclick="doLogout()"><i class="ti ti-logout"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-logo" id="tb-logo"><div class="topbar-logo-placeholder"><i class="ti ti-device-desktop-analytics"></i></div></div>
+      <div class="topbar-title" id="tb-title">Asset Register</div>
+      <div class="topbar-clock" id="tb-clock">--:-- -- | ---</div>
+      <div class="topbar-actions" id="tb-actions"></div>
+      <button class="btn btn-sm btn-icon" title="Settings" onclick="setTab('settings')" id="settings-btn" style="display:none"><i class="ti ti-settings"></i></button>
+    </div>
+    <!-- TICKER BAR -->
+    <div class="ticker-bar">
+      <div class="ticker-label"><i class="ti ti-activity" style="font-size:13px"></i> LIVE</div>
+      <div class="ticker-track-wrap">
+        <div class="ticker-track" id="ticker-track">
+          <div class="ticker-inner" id="ticker-inner"></div>
+        </div>
+      </div>
+    </div>
+    <div class="content" id="main-content"></div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+// ── CONSTANTS ──
+const ASSET_TYPES=['CPU','Laptop','MacBook Pro','Mac Mini','iMac','Windows Laptop','LCD','Penpad / Tablet','Tablet','iPad','Mobile Phone','Attendance Machine','UniFi AP','Server','DVR','Switch','Other'];
+const BRANDS=['Apple','Dell','HP','Lenovo','Asus','Acer','Samsung','Ubiquiti','Hikvision','Dahua','TP-Link','Cisco','Mikrotik','ZKTeco','Yealink','Xiaomi','Huawei','Oppo','Vivo','Realme','OnePlus','Google','Infinix','Tecno','Other'];
+const LOCATIONS=['Main Office','Server Room','Reception','Meeting Room','Studio','Warehouse','Branch Office','Remote / WFH','Other'];
+const FLOORS=['Ground Floor','1st Floor','Remote / WFH'];
+const STATUS_LIST=['Free / Spare','Allotted','Under Repair','Retired'];
+const TAG_TYPES=['Tag','LED Tag','CPU Tag','Laptop Tag','Penpad / Tablet Tag','Server Tag','Mobile Tag','Switch Tag','AP Tag','DVR Tag','LCD Tag','Other Tag'];
+const TYPE_ICONS={'CPU':'ti-device-desktop','Laptop':'ti-device-laptop','MacBook Pro':'ti-device-laptop','Mac Mini':'ti-device-desktop','iMac':'ti-device-imac','Windows Laptop':'ti-device-laptop','LCD':'ti-device-tv','Penpad / Tablet':'ti-device-tablet','Tablet':'ti-device-tablet','iPad':'ti-device-ipad','Mobile Phone':'ti-device-mobile','Attendance Machine':'ti-fingerprint','UniFi AP':'ti-wifi','Server':'ti-server','DVR':'ti-video','Switch':'ti-arrows-transfer-up','Other':'ti-package'};
+
+// ── STATE ──
+let TOKEN = localStorage.getItem('inv_tok') || '';
+let ME = null;
+let DATA = { companies:[], assets:[], nextId:1 };
+let SETTINGS = {};
+let UI = { tab:'assets', company:'', search:'', fType:'', fStatus:'', fFloor:'' };
+
+// ── NOTIFY ──
+let _nt;
+function notify(msg,type='ok'){
+  const el=document.getElementById('_notify');if(el)el.remove();
+  const n=document.createElement('div');n.id='_notify';n.className='notify';
+  n.innerHTML=`<i class="ti ${type==='err'?'ti-alert-circle':'ti-check'}" style="font-size:16px"></i>${msg}`;
+  if(type==='err')n.style.background='#7f1d1d';
+  document.body.appendChild(n);clearTimeout(_nt);_nt=setTimeout(()=>n.remove(),3200);
+}
+
+// ── CLOCK ──
+function updateClock(){
+  const now=new Date();
+  const d=now.toLocaleDateString('en-PK',{weekday:'short',day:'2-digit',month:'short'});
+  const t=now.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const el=document.getElementById('tb-clock');if(el)el.textContent=`${t} | ${d}`;
+}
+setInterval(updateClock,1000);updateClock();
+
+// ── API ──
+async function api(method,url,body){
+  const opts={method,headers:{'Content-Type':'application/json','x-session':TOKEN}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);
+  if(r.status===401){doLogout();return null;}
+  return r.json();
+}
+
+// ── AUTH ──
+async function doLogin(){
+  const u=document.getElementById('lf-u').value.trim();
+  const p=document.getElementById('lf-p').value;
+  if(!u||!p){showLErr('Please enter username and password');return;}
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();
+    if(!r.ok){showLErr(d.error||'Login failed');return;}
+    TOKEN=d.token;localStorage.setItem('inv_tok',TOKEN);ME=d;
+    hideLErr();bootApp();
+  }catch(e){showLErr('Cannot connect to server. Make sure the app is running.');}
+}
+function showLErr(m){const e=document.getElementById('login-err');document.getElementById('login-err-msg').textContent=m;e.classList.add('show');}
+function hideLErr(){document.getElementById('login-err').classList.remove('show');}
+function doLogout(){api('POST','/api/logout');TOKEN='';ME=null;localStorage.removeItem('inv_tok');document.getElementById('login-page').style.display='flex';document.getElementById('main-app').style.display='none';document.getElementById('lf-p').value='';}
+document.getElementById('lf-p').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('lf-u').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('lf-p').focus();});
+
+// ── BOOT ──
+async function bootApp(){
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('main-app').style.display='flex';
+  const isAdmin=ME.role==='admin';
+  document.getElementById('sb-uname').textContent=ME.name;
+  document.getElementById('sb-av').textContent=ME.name.charAt(0).toUpperCase();
+  const rb=document.getElementById('sb-rbadge');rb.textContent=isAdmin?'Admin':'Junior';rb.className='rbadge '+(isAdmin?'rbadge-admin':'rbadge-junior');
+  if(isAdmin){
+    document.getElementById('admin-only-nav').style.display='block';
+    document.getElementById('add-co-btn').style.display='flex';
+    document.getElementById('settings-btn').style.display='flex';
+  }
+  await Promise.all([loadData(),loadSettings()]);
+  setTab('assets');
+}
+
+async function loadData(){
+  const d=await api('GET','/api/data');if(!d)return;
+  DATA=d;
+  // If user is restricted to a company, filter accordingly
+  if(ME&&ME.company){
+    DATA.companies=DATA.companies.filter(c=>c===ME.company);
+    DATA.assets=DATA.assets.filter(a=>a.company===ME.company);
+    UI.company=ME.company;
+  } else {
+    if(!UI.company)UI.company='__ALL__';
+    if(UI.company!=='__ALL__'&&!DATA.companies.includes(UI.company))UI.company='__ALL__';
+  }
+  renderSidebar();
+  updateTicker();
+}
+async function loadSettings(){
+  const s=await api('GET','/api/settings');if(!s)return;
+  SETTINGS=s;applySettings();
+}
+function applySettings(){
+  const s=SETTINGS;
+  document.getElementById('sb-appname').textContent=s.appName||'IT Inventory';
+  document.getElementById('sb-coname').textContent=s.companyName||'';
+  document.getElementById('lp-appname').textContent=s.appName||'IT Asset Inventory';
+  document.getElementById('lp-coname').textContent=s.companyName||'';
+  document.getElementById('lp-addr').textContent=s.address||'';
+  // Main logo
+  const tlw=document.getElementById('tb-logo');
+  const slw=document.getElementById('sb-logo-wrap');
+  if(s.mainLogo){
+    tlw.innerHTML=`<img src="${s.mainLogo}" class="topbar-logo-img" alt="Logo">`;
+    slw.innerHTML=`<img src="${s.mainLogo}" class="sidebar-logo-img" alt="Logo">`;
+  }else{
+    tlw.innerHTML=`<div class="topbar-logo-placeholder"><i class="ti ti-device-desktop-analytics"></i></div>`;
+    slw.innerHTML=`<div class="sidebar-logo-placeholder"><i class="ti ti-device-desktop-analytics"></i></div>`;
+  }
+}
+
+async function saveData(){await api('POST','/api/data',DATA);}
+
+// ── SIDEBAR ──
+function renderSidebar(){
+  const isAdmin=ME&&ME.role==='admin';
+  const cl=document.getElementById('co-sidebar');if(!cl)return;
+  cl.innerHTML=DATA.companies.map(c=>{
+    const active=UI.company===c&&UI.tab==='assets';
+    const logo=SETTINGS.companyLogos&&SETTINGS.companyLogos[c];
+    const cnt=DATA.assets.filter(a=>a.company===c).length;
+    return `<div class="sidebar-item ${active?'active':''}" onclick="switchCo('${c}')">
+      ${logo?`<img src="${logo}" style="width:20px;height:20px;border-radius:4px;object-fit:cover">`:`<i class="ti ti-building"></i>`}
+      ${c}<span class="co-badge ${active?'active-co':''}">${cnt}</span>
+    </div>`;
+  }).join('');
+  // Active state for Asset Register (all companies)
+  const navAssets=document.getElementById('nav-assets');
+  if(navAssets)navAssets.classList.toggle('active',UI.tab==='assets'&&UI.company==='__ALL__');
+  ['assets','summary','users','settings','employees'].forEach(t=>{
+    const el=document.getElementById('nav-'+t);if(el)el.classList.toggle('active',UI.tab===t);
+  });
+}
+
+function switchCo(c){UI.company=c;UI.fCompany='';UI.tab='assets';renderSidebar();renderTab();}
+function setTab(t){UI.tab=t;if(t!=='summary')summaryView='overview';renderSidebar();renderTab();}
+
+// ── RENDER TAB ──
+function renderTab(){
+  const title=document.getElementById('tb-title');
+  const actions=document.getElementById('tb-actions');
+  const content=document.getElementById('main-content');
+  const isAdmin=ME&&ME.role==='admin';
+  if(UI.tab==='assets'){
+    // If specific company selected from sidebar show that, else show ALL
+    const showingAll=UI.company==='__ALL__'||!UI.company;
+    title.innerHTML=showingAll
+      ?`<i class="ti ti-table" style="font-size:15px;color:var(--text2)"></i>&nbsp; Asset Register — <span style="color:var(--primary)">All Companies</span>`
+      :`<span class="co-pill"><i class="ti ti-building" style="font-size:13px"></i>${UI.company}</span>&nbsp; Asset Register`;
+    actions.innerHTML=`
+      <button class="btn btn-success" onclick="openExportModal()"><i class="ti ti-download"></i>Export</button>
+      <button class="btn" style="background:#0e7490;color:#fff;border-color:#0e7490" onclick="openImportExcel()"><i class="ti ti-table-import"></i>Import Excel</button>
+      <button class="btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="openAddTestingDevice()"><i class="ti ti-device-mobile"></i>Add Testing Device</button>
+      <button class="btn btn-primary" onclick="openAddAsset()"><i class="ti ti-plus"></i>Add Asset</button>`;
+    content.innerHTML=renderAssetsTab();setTimeout(initTableRender,10);
+  } else if(UI.tab==='summary'){
+    title.textContent='Summary';actions.innerHTML='';content.innerHTML=renderSummaryTab();
+    setTimeout(drawSummaryCharts,50);
+  } else if(UI.tab==='employees'){
+    title.textContent='Employee Data';
+    actions.innerHTML=`<button class="btn btn-primary" onclick="openAddEmployee()"><i class="ti ti-plus"></i>Add Employee</button>
+    ${isAdmin?`<input type="file" id="emp-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmployeesExcel(this)">
+    <button class="btn" onclick="downloadEmployeeTemplate()"><i class="ti ti-download"></i>Template</button>
+    <button class="btn btn-success" onclick="document.getElementById('emp-excel-input').click()"><i class="ti ti-file-spreadsheet"></i>Import Excel</button>`:''}`;
+    content.innerHTML='<div id="emp-body"></div>';loadEmployeesTab();
+  } else if(UI.tab==='users'&&isAdmin){
+    title.textContent='User Management';
+    actions.innerHTML=`<button class="btn btn-primary" onclick="openAddUser()"><i class="ti ti-plus"></i>Add User</button>`;
+    content.innerHTML='<div id="users-body"></div>';loadUsersTab();
+  } else if(UI.tab==='settings'&&isAdmin){
+    title.textContent='Settings';actions.innerHTML='';content.innerHTML=renderSettingsTab();bindSettingsEvents();
+  }
+}
+
+// ── ASSETS ──
+function filtered(){
+  return DATA.assets.filter(a=>{
+    // If ALL companies mode, skip company filter
+    if(UI.company!=='__ALL__'&&UI.company&&a.company!==UI.company)return false;
+    if(UI.fCompany&&a.company!==UI.fCompany)return false;
+    if(UI.fTypes&&!UI.fTypes.includes(a.type))return false;
+    if(UI.fType&&a.type!==UI.fType)return false;
+    if(UI.fStatus&&a.status!==UI.fStatus)return false;
+    if(UI.fFloor&&a.floor!==UI.fFloor)return false;
+    if(UI.search){const t=UI.search.toLowerCase();return[a.type,a.brand,a.model,a.deviceSpecs,a.gpu,a.ram,a.serial,a.assetTag,a.assetTag2,a.systemTag,a.assignedTo,a.lastAssigned,a.location,a.floor,a.notes,a.vendorName].some(f=>(f||'').toLowerCase().includes(t));}
+    return true;
+  });
+}
+const SYSTEM_TYPES=['CPU','Laptop','MacBook Pro','Mac Mini','iMac','Windows Laptop'];
+const CPU_TYPES=['CPU'];
+const WINDOWS_TYPES=['Laptop','Windows Laptop'];
+const APPLE_TYPES=['MacBook Pro','Mac Mini','iMac'];
+const LCD_TYPES=['LCD'];
+const SERVER_TYPES=['Server'];
+const TESTING_TYPES=['Penpad / Tablet','Tablet','iPad','Mobile Phone'];
+const MISC_TYPES=['UniFi AP','DVR','Switch','Attendance Machine','Other'];
+
+function coStats(co){
+  const a=co==='__ALL__'?DATA.assets:DATA.assets.filter(x=>x.company===co);
+  const bt={};a.forEach(x=>{bt[x.type]=(bt[x.type]||0)+1;});
+  // Count LCDs: assets of type LCD + count of filled LCD tags on ANY asset
+  const lcdTypeCount=a.filter(x=>LCD_TYPES.includes(x.type)).length;
+  const lcdTagCount=a.filter(x=>!LCD_TYPES.includes(x.type)&&(x.assetTag||x.assetTag2)).reduce((sum,x)=>{
+    let c=0;if(x.assetTag&&x.assetTag.trim())c++;if(x.assetTag2&&x.assetTag2.trim())c++;return sum+c;
+  },0);
+  return{
+    total:a.length,
+    allotted:a.filter(x=>x.status==='Allotted').length,
+    free:a.filter(x=>x.status==='Free / Spare').length,
+    repair:a.filter(x=>x.status==='Under Repair').length,
+    retired:a.filter(x=>x.status==='Retired').length,
+    systems:a.filter(x=>SYSTEM_TYPES.includes(x.type)).length,
+    cpus:a.filter(x=>CPU_TYPES.includes(x.type)).length,
+    windows:a.filter(x=>WINDOWS_TYPES.includes(x.type)).length,
+    apple:a.filter(x=>APPLE_TYPES.includes(x.type)).length,
+    lcds:lcdTypeCount+lcdTagCount,
+    lcdDirect:lcdTypeCount,
+    lcdTagged:lcdTagCount,
+    servers:a.filter(x=>SERVER_TYPES.includes(x.type)).length,
+    testing:a.filter(x=>TESTING_TYPES.includes(x.type)).length,
+    misc:a.filter(x=>MISC_TYPES.includes(x.type)).length,
+    byType:bt
+  };
+}
+function badge(s){const m={'Free / Spare':'badge-free','Allotted':'badge-allotted','Under Repair':'badge-repair','Retired':'badge-retired'};return`<span class="badge ${m[s]||'badge-free'}">${s}</span>`;}
+function tagBadge(t){if(!t)return'';return t==='LED Tag'?`<span class="tag-badge tag-led"><i class="ti ti-bulb" style="font-size:11px"></i>${t}</span>`:`<span class="tag-badge tag-normal"><i class="ti ti-tag" style="font-size:11px"></i>${t}</span>`;}
+function expiring(d){if(!d)return false;const diff=(new Date(d)-new Date())/864e5;return diff>0&&diff<90;}
+function fmtCurrency(v){if(!v)return'—';return'PKR '+Number(v).toLocaleString();}
+
+function renderAssetsTab(){
+  const showAll=UI.company==='__ALL__'||!UI.company;
+  const stats=coStats(showAll?'__ALL__':UI.company);const assets=filtered();const isAdmin=ME&&ME.role==='admin';
+  return`
+  <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+    <div class="stat-card" style="cursor:pointer" onclick="clearF()" title="Show all assets">
+      <div class="stat-icon si-blue"><i class="ti ti-database"></i></div><div class="stat-label">Total Assets</div><div class="stat-value">${stats.total}</div><div class="stat-sub">${showAll?'All Companies':UI.company}</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="UI.fStatus='Allotted';UI.fTypes=null;reTable()" title="Show allotted">
+      <div class="stat-icon si-blue"><i class="ti ti-user-check"></i></div><div class="stat-label">Allotted</div><div class="stat-value" style="color:var(--primary)">${stats.allotted}</div><div class="stat-sub">Click to filter</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="UI.fStatus='Free / Spare';UI.fTypes=null;reTable()" title="Show free">
+      <div class="stat-icon si-green"><i class="ti ti-circle-check"></i></div><div class="stat-label">Free / Spare</div><div class="stat-value" style="color:var(--success)">${stats.free}</div><div class="stat-sub">Click to filter</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="UI.fStatus='Under Repair';UI.fTypes=null;reTable()" title="Show repair">
+      <div class="stat-icon si-orange"><i class="ti ti-tool"></i></div><div class="stat-label">Repair</div><div class="stat-value" style="color:var(--warning)">${stats.repair}</div><div class="stat-sub">Click to filter</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="UI.fStatus='Retired';UI.fTypes=null;reTable()" title="Show retired">
+      <div class="stat-icon si-gray"><i class="ti ti-archive"></i></div><div class="stat-label">Retired</div><div class="stat-value" style="color:var(--gray)">${stats.retired}</div><div class="stat-sub">Click to filter</div></div>
+  </div>
+  <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));margin-bottom:16px">
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #C8102E" onclick="filterByTypes(CPU_TYPES)" title="Show all CPUs">
+      <div class="stat-icon si-blue"><i class="ti ti-device-desktop"></i></div><div class="stat-label">Total CPU</div><div class="stat-value" style="color:var(--primary)">${stats.cpus}</div><div class="stat-sub">Desktop CPUs</div></div>
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #0369a1" onclick="filterByTypes(WINDOWS_TYPES)" title="Show Windows Laptops">
+      <div class="stat-icon" style="background:#e0f2fe;color:#0369a1"><i class="ti ti-brand-windows"></i></div><div class="stat-label">Windows Laptop</div><div class="stat-value" style="color:#0369a1">${stats.windows}</div><div class="stat-sub">Laptop+Win Laptop</div></div>
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #374151" onclick="filterByTypes(APPLE_TYPES)" title="Show Apple Devices">
+      <div class="stat-icon" style="background:#f3f4f6;color:#374151"><i class="ti ti-brand-apple"></i></div><div class="stat-label">Apple Devices</div><div class="stat-value" style="color:#374151">${stats.apple}</div><div class="stat-sub">MacBook+Mini+iMac</div></div>
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #0e7490" onclick="openLcdModal()" title="Show all LCD tags and assigned users">
+      <div class="stat-icon" style="background:#e0f7fa;color:#0e7490"><i class="ti ti-device-tv"></i></div><div class="stat-label">Total LCD</div><div class="stat-value" style="color:#0e7490">${stats.lcds}</div><div class="stat-sub">${stats.lcdDirect} units + ${stats.lcdTagged} tagged</div></div>
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #7c3aed" onclick="filterByTypes(TESTING_TYPES)" title="Show testing devices">
+      <div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="ti ti-device-tablet"></i></div><div class="stat-label">Testing Device</div><div class="stat-value" style="color:#7c3aed">${stats.testing}</div><div class="stat-sub">Tablet+Mobile+iPad</div></div>
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #b45309" onclick="filterByTypes(MISC_TYPES)" title="Show misc inventory">
+      <div class="stat-icon" style="background:#fef3c7;color:#b45309"><i class="ti ti-box"></i></div><div class="stat-label">Misc Inventory</div><div class="stat-value" style="color:#b45309">${stats.misc}</div><div class="stat-sub">AP+DVR+Switch+Attend.</div></div>
+    <div class="stat-card" style="cursor:pointer;border-top:3px solid #991b1b" onclick="filterByTypes(SERVER_TYPES)" title="Show servers">
+      <div class="stat-icon" style="background:#fee2e2;color:#991b1b"><i class="ti ti-server"></i></div><div class="stat-label">Server System</div><div class="stat-value" style="color:#991b1b">${stats.servers}</div><div class="stat-sub">Click to filter</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><i class="ti ti-devices" style="font-size:16px;color:var(--text2)"></i><span class="card-title">Asset Types</span><span style="font-size:12px;color:var(--text2)">Click any type to filter</span></div>
+    <div style="padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px">
+      ${Object.entries(stats.byType).length===0?`<span style="color:var(--text3);font-size:13px">No assets yet</span>`:
+        Object.entries(stats.byType).sort((a,b)=>b[1]-a[1]).map(([t,c])=>`
+        <div onclick="UI.fType='${t}';reTable()" style="display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:9px;background:${UI.fType===t?'var(--primary)':'var(--bg)'};color:${UI.fType===t?'#fff':'var(--text)'};border:1px solid ${UI.fType===t?'var(--primary)':'var(--border)'};cursor:pointer;transition:all .15s;font-size:13px" title="Filter by ${t}">
+          <i class="ti ${TYPE_ICONS[t]||'ti-package'}" style="font-size:16px"></i>
+          <span style="font-weight:500">${t}</span>
+          <span style="font-weight:700;font-size:15px;margin-left:2px">${c}</span>
+        </div>`).join('')}
+      ${UI.fType?`<div onclick="UI.fType='';reTable()" style="display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:9px;background:var(--danger-light);color:var(--danger);border:1px solid var(--danger);cursor:pointer;font-size:12px"><i class="ti ti-x"></i>Clear</div>`:''}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><i class="ti ti-table" style="font-size:16px;color:var(--text2)"></i><span class="card-title">Assets</span><span id="asset-count" style="font-size:12px;color:var(--text2)">${assets.length} of ${stats.total}</span></div>
+    <div class="filters">
+      <div class="srch-wrap"><i class="ti ti-search"></i><input type="text" id="f-search" class="srch-input" placeholder="Search by name, serial, tag, RAM, GPU, vendor…" value="${UI.search}"></div>
+      ${showAll?`<select id="f-company"><option value="">All Companies</option>${DATA.companies.map(c=>`<option value="${c}" ${UI.fCompany===c?'selected':''}>${c}</option>`).join('')}</select>`:''}
+      <select id="f-type"><option value="">All Types</option>${ASSET_TYPES.map(t=>`<option value="${t}" ${UI.fType===t?'selected':''}>${t}</option>`).join('')}</select>
+      <select id="f-status"><option value="">All Status</option>${STATUS_LIST.map(s=>`<option value="${s}" ${UI.fStatus===s?'selected':''}>${s}</option>`).join('')}</select>
+      <select id="f-floor"><option value="">All Floors</option>${FLOORS.map(f=>`<option value="${f}" ${UI.fFloor===f?'selected':''}>${f}</option>`).join('')}</select>
+      ${UI.search||UI.fType||UI.fStatus||UI.fFloor||UI.fTypes||UI.fCompany?`<button class="btn btn-sm" onclick="clearF()"><i class="ti ti-x"></i>Clear</button>`:''}
+    </div>
+    <div class="table-wrap"><div id="table-wrap-inner"></div></div>
+  </div>`;
+}
+// Called after renderAssetsTab is inserted into DOM
+function initTableRender(){renderTableOnly();bindFilters();}
+function _unused_old_table(){return'';}
+
+function bindFilters(){
+  const si=document.getElementById('f-search');
+  if(si){
+    si.addEventListener('input',e=>{
+      UI.search=e.target.value;
+      // Only update table body, not full re-render to keep focus
+      renderTableOnly();
+    });
+    // Prevent losing focus
+    si.focus();si.setSelectionRange(si.value.length,si.value.length);
+  }
+  const bind=(id,key)=>{const el=document.getElementById(id);if(el)el.addEventListener('change',e=>{UI[key]=e.target.value;reTable();});};
+  bind('f-type','fType');bind('f-status','fStatus');bind('f-floor','fFloor');bind('f-company','fCompany');
+}
+
+function reTable(){document.getElementById('main-content').innerHTML=renderAssetsTab();initTableRender();}
+function clearF(){UI.search='';UI.fType='';UI.fStatus='';UI.fFloor='';UI.fTypes=null;UI.fCompany='';reTable();}
+function filterByTypes(types){UI.fTypes=types;UI.fType='';UI.fStatus='';UI.search='';reTable();}
+
+function openLcdModal(){
+  const showAll=UI.company==='__ALL__'||!UI.company;
+  const pool=showAll?DATA.assets:DATA.assets.filter(a=>a.company===UI.company);
+  // Build a flat list: one row per LCD tag found (Tag 1 and Tag 2 separately), plus pure LCD-type assets with no tags
+  const rows=[];
+  pool.forEach(a=>{
+    if(a.assetTag&&a.assetTag.trim()){
+      rows.push({tag:a.assetTag.trim(),slot:'LCD Tag 1',asset:a});
+    }
+    if(a.assetTag2&&a.assetTag2.trim()){
+      rows.push({tag:a.assetTag2.trim(),slot:'LCD Tag 2',asset:a});
+    }
+    if(LCD_TYPES.includes(a.type)&&!a.assetTag&&!a.assetTag2){
+      rows.push({tag:a.serial||'—',slot:'LCD Unit',asset:a});
+    }
+  });
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-hicon" style="background:#e0f7fa;color:#0e7490"><i class="ti ti-device-tv"></i></div>
+      <div class="modal-title">LCD Tags — ${showAll?'All Companies':UI.company}</div>
+      <span style="font-size:12px;color:var(--text2);margin-left:8px">${rows.length} LCDs</span>
+      <button class="btn btn-sm btn-icon" style="margin-left:auto" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div class="table-wrap">
+      ${rows.length===0?`<div class="empty-state"><i class="ti ti-device-tv"></i><h3>No LCD tags found</h3><p>Add LCD Tag 1/2 to any asset to see it here.</p></div>`:`
+      <table>
+        <thead><tr>
+          <th>#</th>${showAll?'<th>Company</th>':''}<th>LCD Tag</th><th>Tag Slot</th><th>Linked Device</th><th>Status</th><th>Assigned To</th><th>Location</th><th>Floor</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map((r,i)=>`<tr class="clickable-row" onclick="closeModal();openDetail(${r.asset.id})">
+          <td style="color:var(--text3);font-size:12px">${i+1}</td>
+          ${showAll?`<td><span style="font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:5px;font-weight:700">${r.asset.company}</span></td>`:''}
+          <td><span class="tag-sm" style="background:#e0f7fa;border-color:#0e7490;color:#0e7490;font-weight:700">${r.tag}</span></td>
+          <td style="color:var(--text2);font-size:12px">${r.slot}</td>
+          <td><span style="display:inline-flex;align-items:center;gap:5px;font-weight:600"><i class="ti ${TYPE_ICONS[r.asset.type]||'ti-package'}" style="font-size:14px;color:var(--text2)"></i>${r.asset.brand} ${r.asset.model}</span></td>
+          <td>${badge(r.asset.status)}</td>
+          <td>${r.asset.assignedTo?`<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:22px;height:22px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${r.asset.assignedTo.charAt(0).toUpperCase()}</span><strong>${r.asset.assignedTo}</strong></span>`:'<span style="color:var(--text3)">— Unassigned</span>'}</td>
+          <td style="color:var(--text2)">${r.asset.location}</td>
+          <td style="color:var(--text2)">${r.asset.floor||'—'}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>`}
+      </div>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+}
+
+function renderTableOnly(){
+  const wrap=document.getElementById('table-wrap-inner');
+  if(!wrap){reTable();return;}
+  const assets=filtered();
+  const isAdmin=ME&&ME.role==='admin';
+  const showAll=UI.company==='__ALL__'||!UI.company;
+  if(assets.length===0){
+    wrap.innerHTML=`<div class="empty-state"><i class="ti ti-inbox"></i><h3>No assets found</h3><p>Try a different search term.</p></div>`;
+    return;
+  }
+  wrap.innerHTML=`<table>
+    <thead><tr>
+      <th>#</th>${showAll?'<th>Company</th>':''}<th>Type</th><th>Brand</th><th>Model</th><th>Device Specs</th><th>RAM</th><th>Serial</th><th>LCD Tag 1</th><th>LCD Tag 2</th><th>System Tag</th>
+      <th>Location</th><th>Floor</th><th>Status</th><th>Assigned To</th><th>Last Assigned</th>
+      <th>Purchase Value</th><th>Market Value</th>
+      ${isAdmin?'<th style="text-align:center">Actions</th>':''}
+    </tr></thead>
+    <tbody>
+    ${assets.map((a,i)=>`<tr class="clickable-row" onclick="openDetail(${a.id})">
+      <td style="color:var(--text3);font-size:12px">${i+1}</td>
+      ${showAll?`<td><span style="font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:5px;font-weight:700;cursor:pointer" onclick="event.stopPropagation();switchCo('${a.company}')">${a.company}</span></td>`:''}
+      <td><span style="display:inline-flex;align-items:center;gap:5px"><i class="ti ${TYPE_ICONS[a.type]||'ti-package'}" style="font-size:15px;color:var(--text2)"></i>${a.type}</span></td>
+      <td>${a.brand}</td><td style="font-weight:600">${a.model}</td>
+      <td style="color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.deviceSpecs||''}">${a.deviceSpecs||'—'}</td>
+      <td style="color:var(--text2)">${a.ram||'—'}</td>
+      <td><span class="tag-sm">${a.serial||'—'}</span></td>
+      <td><span class="tag-sm">${a.assetTag||'—'}</span></td>
+      <td><span class="tag-sm">${a.assetTag2||'—'}</span></td>
+      <td><span class="tag-sm">${a.systemTag||'—'}</span></td>
+      <td><i class="ti ti-map-pin" style="font-size:12px;color:var(--text3)"></i> ${a.location}</td>
+      <td style="color:var(--text2)">${a.floor||'—'}</td>
+      <td onclick="event.stopPropagation()">${badge(a.status)}</td>
+      <td>${a.assignedTo?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:22px;height:22px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${a.assignedTo.charAt(0).toUpperCase()}</span>${a.assignedTo}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td style="color:var(--text2)">${a.lastAssigned||'<span style="color:var(--text3)">—</span>'}</td>
+      <td style="color:var(--text2)">${fmtCurrency(a.purchasePrice)}</td>
+      <td style="color:var(--text2)">${fmtCurrency(a.marketValue)}</td>
+      ${isAdmin?`<td onclick="event.stopPropagation()"><div class="actions-cell" style="justify-content:center">
+        <button class="btn btn-sm btn-icon" title="Edit" onclick="openEditAsset(${a.id})"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-icon" title="Delete" style="color:var(--danger)" onclick="delAsset(${a.id})"><i class="ti ti-trash"></i></button>
+      </div></td>`:''}
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+  // Update record count
+  const cntEl=document.getElementById('asset-count');
+  const total=showAll?DATA.assets.length:DATA.assets.filter(a=>a.company===UI.company).length;
+  if(cntEl)cntEl.textContent=`${assets.length} of ${total}`;
+}
+
+// ── ASSET DETAIL VIEW ──
+function openDetail(id){
+  const a=DATA.assets.find(x=>x.id===id);if(!a)return;
+  const isAdmin=ME&&ME.role==='admin';
+  const row=(label,value,full=false)=>`<div class="detail-item${full?' detail-full':''}"><div class="detail-label">${label}</div><div class="detail-value ${!value||value==='—'?'empty':''}">${value||'—'}</div></div>`;
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-hicon"><i class="ti ${TYPE_ICONS[a.type]||'ti-package'}"></i></div>
+      <div>
+        <div class="modal-title">${a.brand} ${a.model}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px">${a.type} &nbsp;·&nbsp; ${a.company} &nbsp;·&nbsp; ${badge(a.status)}</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-sm btn-primary" onclick="closeModal();openEditAsset(${a.id})"><i class="ti ti-edit"></i>Edit</button>
+        <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div style="padding:14px 20px;background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);display:flex;gap:20px;flex-wrap:wrap">
+        <span><i class="ti ti-building" style="font-size:13px"></i> <strong>${a.company}</strong></span>
+        <span><i class="ti ti-map-pin" style="font-size:13px"></i> ${a.location}${a.floor?', '+a.floor:''}</span>
+        <span><i class="ti ti-calendar" style="font-size:13px"></i> Added ${a.purchaseDate||'N/A'}</span>
+        ${a.tagType?`<span>${tagBadge(a.tagType)}</span>`:''}
+      </div>
+      <div class="detail-grid">
+        <div class="section-label full detail-full" style="padding:10px 14px 0;margin:0;border-bottom:none">Device Info</div>
+        ${row('Asset Type',a.type)}${row('Brand',a.brand)}
+        ${row('Model / Description',a.model,true)}
+        ${row('Device Specs',a.deviceSpecs,true)}
+        ${row('GPU / Graphics',a.gpu)}${row('RAM',a.ram)}
+        ${row('SSD',a.ssd)}${row('Secondary HDD',a.hdd)}
+        ${row('Serial Number',`<span class="tag-sm">${a.serial||'—'}</span>`)}${row('LCD Tag 1',`<span class="tag-sm">${a.assetTag||'—'}</span>`)}
+        ${row('LCD Tag 2',`<span class="tag-sm">${a.assetTag2||'—'}</span>`)}${row('System Tag',`<span class="tag-sm">${a.systemTag||'—'}</span>`)}
+        ${row('Previous Tag',`<span class="tag-sm">${a.prevTag||'—'}</span>`)}${row('Location',a.location)}
+        ${row('Status',badge(a.status))}${row('Company',a.company)}
+        <div class="section-label full detail-full" style="padding:10px 14px 0;margin:0;border-bottom:none">Assignment</div>
+        ${row('Currently Assigned To',a.assignedTo?`<strong>${a.assignedTo}</strong>`:'—')}${row('Last Assigned To',a.lastAssigned||'—')}
+        <div class="section-label full detail-full" style="padding:10px 14px 0;margin:0;border-bottom:none">Financial & Vendor</div>
+        ${row('Vendor / Supplier',a.vendorName)}${row('Vendor Contact',a.vendorContact)}
+        ${row('Purchase Price',a.purchasePrice?'<strong>PKR '+Number(a.purchasePrice).toLocaleString()+'</strong>':'—')}${row('Current Market Value',a.marketValue?'PKR '+Number(a.marketValue).toLocaleString():'—')}
+        ${row('Purchase Date',a.purchaseDate)}${row('Warranty Till',a.warranty?`<span style="${expiring(a.warranty)?'color:var(--warning);font-weight:700':''}">${a.warranty}${expiring(a.warranty)?' ⚠️ Expiring soon':''}</span>`:'—')}
+        <div class="section-label full detail-full" style="padding:10px 14px 0;margin:0;border-bottom:none">Notes / Specs</div>
+        ${row('Notes',a.notes||'—',true)}
+      </div>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+}
+
+// ── ASSET MODAL ──
+function openAddAsset(){showAssetModal({id:null,company:UI.company==='__ALL__'||!UI.company?DATA.companies[0]:UI.company,type:'CPU',brand:'',model:'',deviceSpecs:'',gpu:'',ram:'',ssd:'',hdd:'',serial:'',assetTag:'',assetTag2:'',systemTag:'',prevTag:'',location:'Main Office',floor:'Ground Floor',status:'Free / Spare',assignedTo:'',lastAssigned:'',purchaseDate:'',warranty:'',vendorName:'',vendorContact:'',purchasePrice:'',marketValue:'',notes:''});}
+
+const MOBILE_BRANDS=['Apple','Samsung','Xiaomi','Huawei','Oppo','Vivo','Realme','OnePlus','Google','Infinix','Tecno','Other'];
+
+function openAddTestingDevice(){
+  const co=UI.company==='__ALL__'||!UI.company?DATA.companies[0]:UI.company;
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-hicon" style="background:#ede9fe;color:#7c3aed"><i class="ti ti-device-mobile"></i></div>
+      <div class="modal-title">Add Testing Device</div>
+      <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="fg">
+          <label>Device Type *</label>
+          <select id="td_type">
+            <option value="Mobile Phone">Mobile Phone</option>
+            <option value="Tablet">Tablet</option>
+            <option value="iPad">iPad</option>
+            <option value="Penpad / Tablet">Penpad / Tablet</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Mobile / Device Name *</label>
+          <input type="text" id="td_name" placeholder="e.g. iPhone 15 Pro, Galaxy Tab S9">
+        </div>
+        <div class="fg">
+          <label>Model *</label>
+          <input type="text" id="td_model" placeholder="e.g. A2848, SM-X710">
+        </div>
+        <div class="fg">
+          <label>Mobile Company / Brand *</label>
+          <select id="td_brand">${MOBILE_BRANDS.map(b=>`<option value="${b}">${b}</option>`).join('')}</select>
+        </div>
+        <div class="fg">
+          <label>Mobile Tag</label>
+          <input type="text" id="td_tag" placeholder="e.g. MOB-001">
+        </div>
+        <div class="fg">
+          <label>Company</label>
+          <select id="td_company">${DATA.companies.map(c=>`<option value="${c}" ${co===c?'selected':''}>${c}</option>`).join('')}</select>
+        </div>
+        <div class="fg">
+          <label>Status</label>
+          <select id="td_status"><option value="Free / Spare">Free / Spare</option><option value="Allotted">Allotted</option><option value="Under Repair">Under Repair</option></select>
+        </div>
+        <div class="fg">
+          <label>Assigned To</label>
+          <input type="text" id="td_assigned" placeholder="Employee name (optional)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="saveTestingDevice()"><i class="ti ti-plus"></i>Add Device</button>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+}
+
+async function saveTestingDevice(){
+  const g=x=>document.getElementById(x).value;
+  const name=g('td_name').trim();
+  const model=g('td_model').trim();
+  const brand=g('td_brand');
+  if(!name){notify('Please enter Mobile / Device Name','err');return;}
+  if(!model){notify('Please enter Model','err');return;}
+  const assignedTo=g('td_assigned').trim();
+  const newAsset={
+    id:DATA.nextId++,
+    type:g('td_type'),
+    brand,
+    model:`${name} ${model}`.trim(),
+    deviceSpecs:name,
+    gpu:'',ram:'',ssd:'',hdd:'',
+    serial:'',
+    assetTag:g('td_tag').trim(),assetTag2:'',systemTag:'',prevTag:'',
+    company:g('td_company'),
+    location:'Main Office',floor:'Ground Floor',
+    status:g('td_status'),
+    assignedTo,lastAssigned:'',
+    vendorName:'',vendorContact:'',purchasePrice:'',marketValue:'',
+    purchaseDate:'',warranty:'',notes:`Mobile: ${name} | Model: ${model}`
+  };
+  DATA.assets.push(newAsset);
+  await saveData();
+  notify('Testing device added ✅');
+  closeModal();renderTab();renderSidebar();
+  notifySlackAssetChange(newAsset,null);
+}
+
+function openEditAsset(id){const a=DATA.assets.find(x=>x.id===id);showAssetModal({...a});}
+
+function showAssetModal(a){
+  const isEdit=!!a.id;
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal">
+    <div class="modal-header">
+      <div class="modal-hicon"><i class="ti ${isEdit?'ti-edit':'ti-plus'}"></i></div>
+      <div class="modal-title">${isEdit?`Edit — ${a.model}`:'Add New Asset'}</div>
+      <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="section-label">Device Information</div>
+      <div class="form-grid">
+        <div class="fg"><label>Asset Type *</label><select id="f_type">${ASSET_TYPES.map(t=>`<option value="${t}" ${a.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label>Brand *</label><select id="f_brand"><option value="">Select brand…</option>${BRANDS.map(b=>`<option value="${b}" ${a.brand===b?'selected':''}>${b}</option>`).join('')}</select></div>
+        <div class="fg full"><label>Model / Device Description *</label><input type="text" id="f_model" value="${a.model||''}" placeholder="e.g. Dell OptiPlex 7090 Core i7"></div>
+        <div class="fg full"><label>Device Specs <span style="font-weight:400;color:var(--text3)">(Processor, Storage, OS etc.)</span></label><input type="text" id="f_devicespecs" value="${a.deviceSpecs||''}" placeholder="e.g. Core i7 10th Gen, 512GB SSD, Windows 11 Pro"></div>
+        <div class="fg"><label>GPU / Graphics Card</label><input type="text" id="f_gpu" value="${a.gpu||''}" placeholder="e.g. NVIDIA GTX 1650, Intel UHD 630"></div>
+        <div class="fg"><label>RAM</label><input type="text" id="f_ram" value="${a.ram||''}" placeholder="e.g. 16GB DDR4, 8GB DDR5"></div>
+        <div class="fg"><label>SSD</label><input type="text" id="f_ssd" value="${a.ssd||''}" placeholder="e.g. 512GB NVMe, 256GB SATA"></div>
+        <div class="fg"><label>Secondary HDD</label><input type="text" id="f_hdd" value="${a.hdd||''}" placeholder="e.g. 1TB HDD, 2TB SATA"></div>
+        <div class="fg"><label>Serial Number</label><input type="text" id="f_serial" value="${a.serial||''}" placeholder="SN-XXXXX"></div>
+        <div class="fg"><label>LCD Tag 1</label><input type="text" id="f_assettag" value="${a.assetTag||''}" placeholder="e.g. LCD-001, LCD-TAG-01"></div>
+        <div class="fg"><label>LCD Tag 2 <span style="font-weight:400;color:var(--text3)">(optional — 2nd LCD)</span></label><input type="text" id="f_assettag2" value="${a.assetTag2||''}" placeholder="e.g. LCD-002, LCD-TAG-02"></div>
+        <div class="fg"><label>System Tag</label><input type="text" id="f_systemtag" value="${a.systemTag||''}" placeholder="e.g. SYS-001, CPU-TAG-01"></div>
+        <div class="fg"><label>Previous Tag</label><input type="text" id="f_prevtag" value="${a.prevTag||''}" placeholder="e.g. OLD-TAG-001"></div>
+        <div class="fg"><label>Company</label><select id="f_company">${DATA.companies.map(c=>`<option value="${c}" ${a.company===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label>Location</label><select id="f_location">${LOCATIONS.map(l=>`<option value="${l}" ${a.location===l?'selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="fg"><label>Floor</label><select id="f_floor">${FLOORS.map(f=>`<option value="${f}" ${a.floor===f?'selected':''}>${f}</option>`).join('')}</select></div>
+        <div class="fg"><label>Status</label><select id="f_status">${STATUS_LIST.map(s=>`<option value="${s}" ${a.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="section-label">Assignment</div>
+      <div class="form-grid">
+        <div class="fg"><label>Assigned To</label><input type="text" id="f_assigned" value="${a.assignedTo||''}" placeholder="Employee name"></div>
+        <div class="fg"><label>Last Assigned To</label><input type="text" id="f_lastAssigned" value="${a.lastAssigned||''}" placeholder="Previous employee name"></div>
+      </div>
+      <div class="section-label">Financial &amp; Vendor</div>
+      <div class="form-grid">
+        <div class="fg"><label>Vendor / Supplier Name</label><input type="text" id="f_vendor" value="${a.vendorName||''}" placeholder="e.g. Al-Fatah Electronics"></div>
+        <div class="fg"><label>Vendor Contact</label><input type="text" id="f_vendorcontact" value="${a.vendorContact||''}" placeholder="Phone or email"></div>
+        <div class="fg"><label>Purchase Price (PKR)</label><input type="number" id="f_purchaseprice" value="${a.purchasePrice||''}" placeholder="e.g. 85000"></div>
+        <div class="fg"><label>Current Market Value (PKR)</label><input type="number" id="f_marketvalue" value="${a.marketValue||''}" placeholder="e.g. 60000"></div>
+        <div class="fg"><label>Purchase Date</label><input type="date" id="f_purchaseDate" value="${a.purchaseDate||''}"></div>
+        <div class="fg"></div>
+      </div>
+      <div class="section-label">Notes / Specs</div>
+      <div class="fg"><textarea id="f_notes" rows="3" placeholder="e.g. Core i7, 16GB RAM, 512GB SSD, Installed Office 2021">${a.notes||''}</textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAsset(${a.id||'null'})"><i class="ti ${isEdit?'ti-device-floppy':'ti-plus'}"></i>${isEdit?'Save Changes':'Add Asset'}</button>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+}
+
+async function saveAsset(id){
+  const g=x=>document.getElementById(x);
+  const brand=g('f_brand').value;const model=g('f_model').value.trim();
+  if(!brand){notify('Please select a Brand','err');return;}
+  if(!model){notify('Please enter Model / Description','err');return;}
+  const prevAsset=id?DATA.assets.find(x=>x.id===id):null;
+  const a={id:id||null,type:g('f_type').value,brand,model,deviceSpecs:g('f_devicespecs').value.trim(),gpu:g('f_gpu').value.trim(),ram:g('f_ram').value.trim(),ssd:g('f_ssd').value.trim(),hdd:g('f_hdd').value.trim(),serial:g('f_serial').value.trim(),assetTag:g('f_assettag').value.trim(),assetTag2:g('f_assettag2').value.trim(),systemTag:g('f_systemtag').value.trim(),prevTag:g('f_prevtag').value.trim(),
+    company:g('f_company').value,location:g('f_location').value,floor:g('f_floor').value,status:g('f_status').value,
+    assignedTo:g('f_assigned').value.trim(),lastAssigned:g('f_lastAssigned').value.trim(),
+    vendorName:g('f_vendor').value.trim(),vendorContact:g('f_vendorcontact').value.trim(),
+    purchasePrice:g('f_purchaseprice').value,marketValue:g('f_marketvalue').value,
+    purchaseDate:g('f_purchaseDate').value,warranty:'',notes:g('f_notes').value.trim()};
+  if(id){DATA.assets=DATA.assets.map(x=>x.id===id?{...a,id}:x);}
+  else{DATA.assets.push({...a,id:DATA.nextId++});}
+  await saveData();
+  notify(id?'Asset updated':'Asset added');
+  closeModal();renderTab();renderSidebar();updateTicker();
+  // Send Slack notification in background
+  notifySlackAssetChange({...a,id:a.id||DATA.nextId-1}, prevAsset);
+}
+
+async function delAsset(id){
+  const a=DATA.assets.find(x=>x.id===id);
+  if(!confirm(`Delete "${a.model}" (${a.brand})?\nThis cannot be undone.`))return;
+  DATA.assets=DATA.assets.filter(x=>x.id!==id);
+  await saveData();notify('Asset deleted');renderTab();renderSidebar();
+}
+
+// ── COMPANY ──
+async function addCompany(){
+  const name=prompt('Enter new company name:');if(!name||!name.trim())return;
+  const n=name.trim();
+  if(DATA.companies.includes(n)){notify('Company already exists','err');return;}
+  DATA.companies.push(n);await saveData();UI.company=n;notify(`Company "${n}" added`);renderSidebar();renderTab();
+}
+async function deleteCompany(name){
+  const cnt=DATA.assets.filter(a=>a.company===name).length;
+  if(!confirm(`Delete company "${name}"${cnt>0?` and its ${cnt} asset(s)`:''}?\nThis CANNOT be undone!`))return;
+  const r=await api('DELETE',`/api/company/${encodeURIComponent(name)}`);
+  if(r&&r.success){DATA.assets=DATA.assets.filter(a=>a.company!==name);DATA.companies=DATA.companies.filter(c=>c!==name);UI.company=DATA.companies[0]||'';notify(`Company "${name}" deleted`);renderSidebar();renderTab();}
+}
+
+// ── SUMMARY ──
+let summaryView='overview'; // overview | companies | assets | allotted | free
+
+function renderSummaryTab(){
+  const allT=DATA.assets.length;
+  const allA=DATA.assets.filter(a=>a.status==='Allotted').length;
+  const allF=DATA.assets.filter(a=>a.status==='Free / Spare').length;
+  const allR=DATA.assets.filter(a=>a.status==='Under Repair').length;
+  const allRet=DATA.assets.filter(a=>a.status==='Retired').length;
+  const isAdmin=ME&&ME.role==='admin';
+  const allStats=coStats('__ALL__');
+
+  // Type breakdown across all companies
+  const byType={};
+  DATA.assets.forEach(a=>{byType[a.type]=(byType[a.type]||0)+1;});
+  const typeEntries=Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+
+  // Colors for pie chart
+  const PIE_COLORS=['#C8102E','#0e7490','#7c3aed','#b45309','#991b1b','#2d7a0f','#c2410c','#0f766e','#6d28d9','#be185d','#0369a1','#374151','#065f46'];
+
+  let drillHTML='';
+
+  if(summaryView==='companies'){
+    drillHTML=`
+    <div class="card">
+      <div class="card-header">
+        <button class="btn btn-sm" onclick="summaryView='overview';renderTab()"><i class="ti ti-arrow-left"></i>Back</button>
+        <i class="ti ti-building" style="font-size:16px;color:var(--primary)"></i>
+        <span class="card-title">All Companies</span>
+      </div>
+      <div style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px">
+        ${DATA.companies.map(co=>{
+          const s=coStats(co);const logo=SETTINGS.companyLogos&&SETTINGS.companyLogos[co];
+          return`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer" onclick="switchCo('${co}')">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+              ${logo?`<img src="${logo}" style="width:44px;height:44px;border-radius:9px;object-fit:contain">`:`<div style="width:44px;height:44px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ti ti-building"></i></div>`}
+              <div><div style="font-weight:700;font-size:16px">${co}</div><div style="font-size:12px;color:var(--text2)">${s.total} total assets</div></div>
+              <button class="btn btn-sm btn-primary" style="margin-left:auto"><i class="ti ti-arrow-right"></i>View</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+              <div style="text-align:center;padding:8px;background:var(--primary-light);border-radius:7px"><div style="font-size:20px;font-weight:700;color:var(--primary)">${s.allotted}</div><div style="font-size:10px;color:var(--primary)">Allotted</div></div>
+              <div style="text-align:center;padding:8px;background:var(--success-light);border-radius:7px"><div style="font-size:20px;font-weight:700;color:var(--success)">${s.free}</div><div style="font-size:10px;color:var(--success)">Free</div></div>
+              <div style="text-align:center;padding:8px;background:var(--warning-light);border-radius:7px"><div style="font-size:20px;font-weight:700;color:var(--warning)">${s.repair}</div><div style="font-size:10px;color:var(--warning)">Repair</div></div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">
+              ${Object.entries(s.byType).map(([t,c])=>`<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:var(--surface);border:1px solid var(--border);font-size:11px"><i class="ti ${TYPE_ICONS[t]||'ti-package'}" style="font-size:12px;color:var(--text2)"></i>${t} <b>${c}</b></span>`).join('')}
+              ${Object.keys(s.byType).length===0?'<span style="color:var(--text3);font-size:12px">No assets yet</span>':''}
+            </div>
+          </div>`;
+        }).join('')}
+        ${isAdmin?`<div style="background:var(--bg);border:2px dashed var(--border2);border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;min-height:140px" onclick="closeModal();addCompany()">
+          <i class="ti ti-plus" style="font-size:28px;color:var(--text3)"></i>
+          <div style="font-size:13px;color:var(--text2);font-weight:600">Add New Company</div>
+        </div>`:''}
+      </div>
+    </div>`;
+  } else if(summaryView==='assets'||summaryView==='allotted'||summaryView==='free'||summaryView==='repair'){
+    const filterMap={assets:null,allotted:'Allotted',free:'Free / Spare',repair:'Under Repair'};
+    const titleMap={assets:'All Assets',allotted:'Allotted Assets',free:'Free / Spare Assets',repair:'Under Repair'};
+    const fStatus=filterMap[summaryView];
+    const viewAssets=DATA.assets.filter(a=>!fStatus||a.status===fStatus);
+    drillHTML=`
+    <div class="card">
+      <div class="card-header">
+        <button class="btn btn-sm" onclick="summaryView='overview';renderTab()"><i class="ti ti-arrow-left"></i>Back</button>
+        <i class="ti ti-table" style="font-size:16px;color:var(--primary)"></i>
+        <span class="card-title">${titleMap[summaryView]}</span>
+        <span style="font-size:12px;color:var(--text2)">${viewAssets.length} records</span>
+      </div>
+      <div class="table-wrap">
+      ${viewAssets.length===0?`<div class="empty-state"><i class="ti ti-inbox"></i><h3>No assets found</h3></div>`:`
+      <table>
+        <thead><tr>
+          <th>#</th><th>Company</th><th>Type</th><th>Brand</th><th>Model</th><th>Specs</th><th>RAM</th><th>Serial</th><th>Location</th><th>Floor</th><th>Status</th><th>Assigned To</th><th>Purchase PKR</th><th>Warranty</th>
+        </tr></thead>
+        <tbody>
+        ${viewAssets.map((a,i)=>`<tr class="clickable-row" onclick="openDetail(${a.id})">
+          <td style="color:var(--text3);font-size:12px">${i+1}</td>
+          <td><span style="font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 7px;border-radius:5px;font-weight:600">${a.company}</span></td>
+          <td><span style="display:inline-flex;align-items:center;gap:4px"><i class="ti ${TYPE_ICONS[a.type]||'ti-package'}" style="font-size:14px;color:var(--text2)"></i>${a.type}</span></td>
+          <td>${a.brand}</td>
+          <td style="font-weight:600">${a.model}</td>
+          <td style="color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${a.deviceSpecs||''}">${a.deviceSpecs||'—'}</td>
+          <td style="color:var(--text2)">${a.ram||'—'}</td>
+          <td><span class="tag-sm">${a.serial||'—'}</span></td>
+          <td>${a.location}</td>
+          <td style="color:var(--text2)">${a.floor||'—'}</td>
+          <td>${badge(a.status)}</td>
+          <td>${a.assignedTo?`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:22px;height:22px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">${a.assignedTo.charAt(0).toUpperCase()}</span>${a.assignedTo}</span>`:'<span style="color:var(--text3)">—</span>'}</td>
+          <td style="color:var(--text2)">${a.purchasePrice?'PKR '+Number(a.purchasePrice).toLocaleString():'—'}</td>
+          <td style="white-space:nowrap">${a.warranty?`<span style="${expiring(a.warranty)?'color:var(--warning);font-weight:700':''}">${a.warranty}${expiring(a.warranty)?' ⚠️':''}</span>`:'—'}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table>`}
+      </div>
+    </div>`;
+  } else {
+    // OVERVIEW — charts + cards
+    drillHTML='';
+  }
+
+  return`
+  <!-- TOP CLICKABLE STAT CARDS -->
+  <div class="stats-grid" style="margin-bottom:16px">
+    <div class="stat-card" style="cursor:pointer;border:2px solid ${summaryView==='companies'?'var(--primary)':'var(--border)'}" onclick="summaryView='companies';renderTab()">
+      <div class="stat-icon si-blue"><i class="ti ti-building"></i></div>
+      <div class="stat-label">Companies</div>
+      <div class="stat-value">${DATA.companies.length}</div>
+      <div class="stat-sub" style="color:var(--primary);font-weight:600">Click to explore →</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:2px solid ${summaryView==='assets'?'var(--primary)':'var(--border)'}" onclick="summaryView='assets';renderTab()">
+      <div class="stat-icon si-blue"><i class="ti ti-database"></i></div>
+      <div class="stat-label">Total Assets</div>
+      <div class="stat-value">${allT}</div>
+      <div class="stat-sub" style="color:var(--primary);font-weight:600">Click to view all →</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:2px solid ${summaryView==='allotted'?'var(--primary)':'var(--border)'}" onclick="summaryView='allotted';renderTab()">
+      <div class="stat-icon si-blue"><i class="ti ti-user-check"></i></div>
+      <div class="stat-label">Allotted</div>
+      <div class="stat-value" style="color:var(--primary)">${allA}</div>
+      <div class="stat-sub" style="color:var(--primary);font-weight:600">Click to see who →</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:2px solid ${summaryView==='free'?'var(--success)':'var(--border)'}" onclick="summaryView='free';renderTab()">
+      <div class="stat-icon si-green"><i class="ti ti-circle-check"></i></div>
+      <div class="stat-label">Free / Spare</div>
+      <div class="stat-value" style="color:var(--success)">${allF}</div>
+      <div class="stat-sub" style="color:var(--success);font-weight:600">Click to view →</div>
+    </div>
+    <div class="stat-card" style="cursor:pointer;border:2px solid ${summaryView==='repair'?'var(--warning)':'var(--border)'}" onclick="summaryView='repair';renderTab()">
+      <div class="stat-icon si-orange"><i class="ti ti-tool"></i></div>
+      <div class="stat-label">Under Repair</div>
+      <div class="stat-value" style="color:var(--warning)">${allR}</div>
+      <div class="stat-sub" style="color:var(--warning);font-weight:600">Click to view →</div>
+    </div>
+  </div>
+
+  ${drillHTML||`
+  <!-- CHARTS ROW -->
+  <div style="display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- DONUT — Status -->
+    <div class="card">
+      <div class="card-header"><i class="ti ti-chart-donut" style="font-size:16px;color:var(--primary)"></i><span class="card-title">Asset Status</span><span style="font-size:11px;color:var(--text2)">All Companies</span></div>
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:24px">
+        <div style="flex-shrink:0">
+          <canvas id="pie-status" width="160" height="160" style="width:160px;height:160px"></canvas>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+          ${[['Allotted',allA,'#C8102E'],['Free / Spare',allF,'#2d7a0f'],['Under Repair',allR,'#854F0B'],['Retired',allRet,'#94a3b8']].map(([l,v,c])=>`
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <span style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px">
+                <span style="width:10px;height:10px;border-radius:3px;background:${c};display:inline-block;flex-shrink:0"></span>${l}
+              </span>
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${v}</span>
+            </div>
+            <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${allT>0?Math.round(v/allT*100):0}%;background:${c};border-radius:3px;transition:width .8s ease"></div>
+            </div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- DEVICE BREAKDOWN -->
+    <div class="card">
+      <div class="card-header"><i class="ti ti-devices" style="font-size:16px;color:var(--primary)"></i><span class="card-title">Device Breakdown</span></div>
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:9px">
+        ${[['CPU',allStats.cpus,'#C8102E','ti-device-desktop'],['MacBook / Mac',allStats.apple,'#374151','ti-brand-apple'],['Windows Laptop',allStats.windows,'#0369a1','ti-brand-windows'],['LCD Screens',allStats.lcds,'#0e7490','ti-device-tv'],['Servers',allStats.servers,'#991b1b','ti-server'],['Misc / Network',allStats.misc,'#b45309','ti-box']].map(([l,v,c,ic])=>`
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:26px;height:26px;border-radius:6px;background:${c}22;color:${c};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${ic}" style="font-size:14px"></i></div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="font-size:11px;color:var(--text);font-weight:500">${l}</span><span style="font-size:12px;font-weight:700;color:${c}">${v}</span></div>
+            <div style="height:5px;background:var(--bg);border-radius:3px;overflow:hidden"><div style="height:100%;width:${allT>0?Math.max(v>0?4:0,Math.round(v/allT*100)):0}%;background:${c};border-radius:3px"></div></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- TOP ASSIGNED -->
+    <div class="card">
+      <div class="card-header"><i class="ti ti-users" style="font-size:16px;color:var(--primary)"></i><span class="card-title">Top Assigned</span><span style="font-size:11px;color:var(--text2)">by person</span></div>
+      <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:220px">
+        ${(()=>{
+          const byPerson={};
+          DATA.assets.filter(a=>a.assignedTo).forEach(a=>{byPerson[a.assignedTo]=(byPerson[a.assignedTo]||0)+1;});
+          const sorted=Object.entries(byPerson).sort((a,b)=>b[1]-a[1]).slice(0,7);
+          const maxV=sorted.length?sorted[0][1]:1;
+          if(!sorted.length)return`<div style="text-align:center;color:var(--text3);padding:20px;font-size:13px">No assets assigned yet</div>`;
+          return sorted.map(([name,cnt])=>`
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:26px;height:26px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${name.charAt(0).toUpperCase()}</div>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;margin-bottom:2px"><span style="font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px" title="${name}">${name}</span><span style="font-size:12px;font-weight:700;color:var(--primary)">${cnt}</span></div>
+              <div style="height:4px;background:var(--bg);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.round(cnt/maxV*100)}%;background:var(--primary);border-radius:2px"></div></div>
+            </div>
+          </div>`).join('');
+        })()}
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPANY CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px">
+    ${DATA.companies.map(co=>{
+      const s=coStats(co);const logo=SETTINGS.companyLogos&&SETTINGS.companyLogos[co];
+      const pct=s.total>0?Math.round((s.allotted/s.total)*100):0;
+      const typeTop=Object.entries(s.byType).sort((a,b)=>b[1]-a[1]).slice(0,6);
+      return`<div class="card" style="cursor:pointer;transition:all .2s" onmouseover="this.style.boxShadow='0 6px 24px rgba(200,16,46,.15)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='';this.style.transform=''" onclick="switchCo('${co}')">
+        <div style="padding:16px 16px 0">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+            ${logo?`<img src="${logo}" style="width:46px;height:46px;border-radius:10px;object-fit:contain;border:1px solid var(--border)">`:`<div style="width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,#C8102E,#8E0B20);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ti ti-building"></i></div>`}
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:16px">${co}</div>
+              <div style="font-size:12px;color:var(--text2)">${s.total} assets · ${s.lcds} LCDs · ${pct}% utilised</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:26px;font-weight:800;color:var(--primary)">${pct}%</div>
+              <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Utilised</div>
+            </div>
+          </div>
+          <div style="height:8px;background:var(--bg);border-radius:4px;margin-bottom:14px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#C8102E,#8E0B20);border-radius:4px"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px">
+            <div style="text-align:center;padding:8px 4px;background:var(--primary-light);border-radius:8px"><div style="font-size:20px;font-weight:800;color:var(--primary)">${s.allotted}</div><div style="font-size:9px;color:var(--primary);font-weight:700;text-transform:uppercase">Allotted</div></div>
+            <div style="text-align:center;padding:8px 4px;background:var(--success-light);border-radius:8px"><div style="font-size:20px;font-weight:800;color:var(--success)">${s.free}</div><div style="font-size:9px;color:var(--success);font-weight:700;text-transform:uppercase">Free</div></div>
+            <div style="text-align:center;padding:8px 4px;background:var(--warning-light);border-radius:8px"><div style="font-size:20px;font-weight:800;color:var(--warning)">${s.repair}</div><div style="font-size:9px;color:var(--warning);font-weight:700;text-transform:uppercase">Repair</div></div>
+            <div style="text-align:center;padding:8px 4px;background:#e0f7fa;border-radius:8px"><div style="font-size:20px;font-weight:800;color:#0e7490">${s.lcds}</div><div style="font-size:9px;color:#0e7490;font-weight:700;text-transform:uppercase">LCDs</div></div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;padding-bottom:14px">
+            ${typeTop.map(([t,c])=>`<span style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:7px;background:var(--bg);border:1px solid var(--border);font-size:11px;font-weight:500"><i class="ti ${TYPE_ICONS[t]||'ti-package'}" style="font-size:12px;color:var(--text2)"></i>${t} <b style="color:var(--primary)">${c}</b></span>`).join('')}
+            ${Object.keys(s.byType).length===0?'<span style="color:var(--text3);font-size:12px">No assets yet</span>':''}
+          </div>
+        </div>
+        <div style="padding:10px 16px;border-top:1px solid var(--border);background:#f8fafc;display:flex;justify-content:space-between;align-items:center;border-radius:0 0 12px 12px">
+          <span style="font-size:12px;color:var(--text2)"><i class="ti ti-click" style="font-size:13px"></i> Click to open register</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();switchCo('${co}')"><i class="ti ti-arrow-right"></i>View</button>
+            ${isAdmin?`<button class="btn btn-sm" style="color:var(--danger)" onclick="event.stopPropagation();deleteCompany('${co}')"><i class="ti ti-trash"></i></button>`:''}
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`}
+  `;
+}
+
+function drawSummaryCharts(){
+  const canvas=document.getElementById('pie-status');
+  if(!canvas)return;
+  const dpr=window.devicePixelRatio||1;
+  const size=160;
+  canvas.width=size*dpr;canvas.height=size*dpr;
+  canvas.style.width=size+'px';canvas.style.height=size+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  const cx=size/2,cy=size/2,R=68,r=44,gap=0.03;
+  const slices=[
+    {v:DATA.assets.filter(a=>a.status==='Allotted').length,c:'#C8102E'},
+    {v:DATA.assets.filter(a=>a.status==='Free / Spare').length,c:'#2d7a0f'},
+    {v:DATA.assets.filter(a=>a.status==='Under Repair').length,c:'#854F0B'},
+    {v:DATA.assets.filter(a=>a.status==='Retired').length,c:'#94a3b8'},
+  ].filter(s=>s.v>0);
+  const total=slices.reduce((s,x)=>s+x.v,0);
+  if(!total){
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+    ctx.fillStyle='#e2e8f0';ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle='#fff';ctx.fill();
+    return;
+  }
+  // Draw segments with gap
+  let start=-Math.PI/2;
+  slices.forEach(sl=>{
+    const angle=(sl.v/total)*Math.PI*2-gap;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,R,start+gap/2,start+gap/2+angle);
+    ctx.closePath();
+    ctx.fillStyle=sl.c;
+    ctx.fill();
+    start+=angle+gap;
+  });
+  // White donut hole
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle='#fff';ctx.fill();
+  // Center total number only - HTML overlay handles label
+  ctx.fillStyle='#1e293b';
+  ctx.font=`bold ${total>99?'20':'24'}px -apple-system,system-ui,sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(total,cx,cy-6);
+  ctx.fillStyle='#64748b';
+  ctx.font='10px -apple-system,system-ui,sans-serif';
+  ctx.fillText('TOTAL',cx,cy+10);
+}
+
+
+// ── EMPLOYEE DATA ──
+const DEPARTMENTS=['IT','Management','Finance','HR','Sales','Marketing','Operations','Design','Development','Support','Other'];
+
+async function loadEmployeesTab(){
+  const d=await api('GET','/api/data');if(!d)return;
+  const employees=(d.employees||[]);
+  const body=document.getElementById('emp-body');if(!body)return;
+  body.innerHTML=`
+  <div class="card">
+    <div class="card-header">
+      <i class="ti ti-id-badge" style="font-size:16px;color:var(--primary)"></i>
+      <span class="card-title">Employees</span>
+      <span style="font-size:12px;color:var(--text2)">${employees.length} records</span>
+      <div class="srch-wrap" style="margin-left:auto"><i class="ti ti-search"></i><input type="text" id="emp-search" class="srch-input" placeholder="Search name, dept, ID…" style="min-width:200px" oninput="filterEmployees(this.value)"></div>
+    </div>
+    <div class="table-wrap">
+    ${employees.length===0?`<div class="empty-state"><i class="ti ti-users"></i><h3>No employees yet</h3><p>Click "Add Employee" to get started.</p></div>`:`
+    <table id="emp-table">
+      <thead><tr>
+        <th>#</th><th>Employee ID</th><th>Full Name</th><th>Department</th>
+        <th>Email</th><th>Slack ID</th><th>Phone</th><th>Designation</th>
+        <th>Company</th><th>Status</th><th style="text-align:center">Actions</th>
+      </tr></thead>
+      <tbody id="emp-tbody">
+      ${employees.map((e,i)=>`<tr data-search="${[e.name,e.department,e.empId,e.email,e.slack,e.designation,e.company].join(' ').toLowerCase()}">
+        <td style="color:var(--text3);font-size:12px">${i+1}</td>
+        <td><span class="tag-sm">${e.empId||'—'}</span></td>
+        <td><span style="display:inline-flex;align-items:center;gap:7px">
+          <span style="width:28px;height:28px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">${(e.name||'?').charAt(0).toUpperCase()}</span>
+          <span style="font-weight:600">${e.name}</span>
+        </span></td>
+        <td><span style="font-size:11px;background:var(--primary-light);color:var(--primary);padding:2px 8px;border-radius:5px;font-weight:600">${e.department||'—'}</span></td>
+        <td style="color:var(--text2)">${e.email?`<a href="mailto:${e.email}" style="color:var(--primary)">${e.email}</a>`:'—'}</td>
+        <td><span class="tag-sm">${e.slack||'—'}</span></td>
+        <td style="color:var(--text2)">${e.phone||'—'}</td>
+        <td style="color:var(--text2)">${e.designation||'—'}</td>
+        <td><span style="font-size:11px;background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:5px;font-weight:600">${e.company||'—'}</span></td>
+        <td>${e.status==='Inactive'?`<span class="badge badge-retired">Inactive</span>`:`<span class="badge badge-allotted">Active</span>`}</td>
+        <td><div class="actions-cell" style="justify-content:center">
+          <button class="btn btn-sm btn-icon" title="Edit" onclick="openEditEmployee(${e.id})"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-sm btn-icon" title="Delete" style="color:var(--danger)" onclick="deleteEmployee(${e.id},'${e.name}')"><i class="ti ti-trash"></i></button>
+        </div></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>`}
+    </div>
+  </div>`;
+}
+
+function filterEmployees(q){
+  const rows=document.querySelectorAll('#emp-tbody tr');
+  rows.forEach(r=>{r.style.display=r.dataset.search.includes(q.toLowerCase())?'':'none';});
+}
+
+function openAddEmployee(){
+  showEmployeeModal({id:null,empId:'',name:'',department:'',designation:'',email:'',slack:'',phone:'',company:DATA.companies[0]||'',status:'Active',notes:''});
+}
+
+async function openEditEmployee(id){
+  const d=await api('GET','/api/data');
+  const e=(d.employees||[]).find(x=>x.id===id);
+  if(e)showEmployeeModal({...e});
+}
+
+function showEmployeeModal(e){
+  const isEdit=!!e.id;
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal">
+    <div class="modal-header">
+      <div class="modal-hicon"><i class="ti ${isEdit?'ti-user-edit':'ti-user-plus'}"></i></div>
+      <div class="modal-title">${isEdit?`Edit — ${e.name}`:'Add New Employee'}</div>
+      <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="section-label">Personal Info</div>
+      <div class="form-grid">
+        <div class="fg"><label>Employee ID</label><input type="text" id="e_empid" value="${e.empId||''}" placeholder="e.g. EMP-001, GSS-101"></div>
+        <div class="fg"><label>Full Name *</label><input type="text" id="e_name" value="${e.name||''}" placeholder="e.g. Ahmed Raza"></div>
+        <div class="fg"><label>Designation / Job Title</label><input type="text" id="e_desig" value="${e.designation||''}" placeholder="e.g. Software Engineer"></div>
+        <div class="fg"><label>Department</label><select id="e_dept">${DEPARTMENTS.map(d=>`<option value="${d}" ${e.department===d?'selected':''}>${d}</option>`).join('')}</select></div>
+        <div class="fg"><label>Company</label><select id="e_company">${DATA.companies.map(c=>`<option value="${c}" ${e.company===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label>Status</label><select id="e_status"><option value="Active" ${e.status==='Active'?'selected':''}>Active</option><option value="Inactive" ${e.status==='Inactive'?'selected':''}>Inactive</option></select></div>
+      </div>
+      <div class="section-label">Contact Info</div>
+      <div class="form-grid">
+        <div class="fg"><label>Email</label><input type="text" id="e_email" value="${e.email||''}" placeholder="e.g. ahmed@gss.pk"></div>
+        <div class="fg"><label>Phone</label><input type="text" id="e_phone" value="${e.phone||''}" placeholder="e.g. 0300-1234567"></div>
+        <div class="fg full"><label>Slack ID</label><input type="text" id="e_slack" value="${e.slack||''}" placeholder="e.g. @ahmed.raza or U0123ABCDEF"></div>
+      </div>
+      <div class="section-label">Notes</div>
+      <div class="fg"><textarea id="e_notes" rows="2" placeholder="Any additional notes…">${e.notes||''}</textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmployee(${e.id||'null'})"><i class="ti ${isEdit?'ti-device-floppy':'ti-plus'}"></i>${isEdit?'Save Changes':'Add Employee'}</button>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',ev=>{if(ev.target.id==='mo')closeModal();});
+}
+
+async function saveEmployee(id){
+  const g=x=>document.getElementById(x);
+  const name=g('e_name').value.trim();
+  if(!name){notify('Full Name is required','err');return;}
+  const d=await api('GET','/api/data');
+  const employees=d.employees||[];
+  const nextEmpId=(d.nextEmpId||1);
+  const emp={
+    id:id||nextEmpId,
+    empId:g('e_empid').value.trim(),name,
+    designation:g('e_desig').value.trim(),
+    department:g('e_dept').value,
+    company:g('e_company').value,
+    status:g('e_status').value,
+    email:g('e_email').value.trim(),
+    phone:g('e_phone').value.trim(),
+    slack:g('e_slack').value.trim(),
+    notes:g('e_notes').value.trim()
+  };
+  let updated;
+  if(id){updated=employees.map(x=>x.id===id?emp:x);}
+  else{updated=[...employees,emp];d.nextEmpId=(nextEmpId+1);}
+  await api('POST','/api/data',{...d,employees:updated});
+  notify(id?'Employee updated':'Employee added');
+  closeModal();loadEmployeesTab();
+}
+
+async function deleteEmployee(id,name){
+  if(!confirm(`Delete employee "${name}"?\nThis cannot be undone.`))return;
+  const d=await api('GET','/api/data');
+  d.employees=(d.employees||[]).filter(e=>e.id!==id);
+  await api('POST','/api/data',d);
+  notify(`"${name}" deleted`);loadEmployeesTab();
+}
+
+// ── EMPLOYEE EXCEL IMPORT / TEMPLATE ──
+function downloadEmployeeTemplate(){
+  const headers=[['Employee ID','Full Name','Designation','Department','Company','Status','Email','Phone','Slack ID','Notes']];
+  const sample=[
+    ['EMP-001','Ahmed Raza','Software Engineer','IT','GSS','Active','ahmed@gss.pk','0300-1234567','@ahmed.raza',''],
+    ['EMP-002','Sara Khan','HR Manager','HR','Mobligate','Active','sara@mobligate.pk','0321-9876543','@sara.khan',''],
+    ['EMP-003','Bilal Malik','Accountant','Finance','GSS','Active','bilal@gss.pk','0333-5556677','@bilal.malik',''],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([...headers,...sample]);
+  ws['!cols']=[12,18,20,14,12,10,24,16,18,20].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Employees');
+  XLSX.writeFile(wb,'Employee_Import_Template.xlsx');
+  notify('Template downloaded — fill it and import back');
+}
+
+async function importEmployeesExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async(ev)=>{
+    try{
+      const data=new Uint8Array(ev.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!rows.length){notify('No data found in Excel file','err');return;}
+
+      // Map columns flexibly (case insensitive, ignore spaces/dashes)
+      const map=(row,keys)=>{
+        for(const k of keys){
+          const found=Object.keys(row).find(rk=>rk.toLowerCase().replace(/[\s_\-]/g,'')===k.toLowerCase().replace(/[\s_\-]/g,''));
+          if(found&&row[found]!==undefined&&row[found]!=='')return String(row[found]).trim();
+        }
+        return '';
+      };
+
+      const d=await api('GET','/api/data');
+      const existing=d.employees||[];
+      let nextId=d.nextEmpId||1;
+      let added=0,skipped=0;
+
+      const newEmps=rows.map(row=>{
+        const name=map(row,['fullname','name','employeename','empname']);
+        if(!name){skipped++;return null;}
+        const empId=map(row,['employeeid','empid','id','employeeno']);
+        if(empId&&existing.find(e=>e.empId===empId)){skipped++;return null;}
+        added++;
+        return{
+          id:nextId++,
+          empId:empId||`EMP-${String(nextId-1).padStart(3,'0')}`,
+          name,
+          designation:map(row,['designation','jobtitle','title','position','role']),
+          department:map(row,['department','dept','division']),
+          company:map(row,['company','organization','org'])||DATA.companies[0]||'',
+          status:map(row,['status','empstatus'])||'Active',
+          email:map(row,['email','emailaddress','mail']),
+          phone:map(row,['phone','mobile','contact','phonenumber','mobilenumber']),
+          slack:map(row,['slackid','slack','slackhandle']),
+          notes:map(row,['notes','remarks','comment','comments'])
+        };
+      }).filter(Boolean);
+
+      if(!newEmps.length){notify(`No new employees to import (${skipped} skipped)`,'err');input.value='';return;}
+      await api('POST','/api/data',{...d,employees:[...existing,...newEmps],nextEmpId:nextId});
+      notify(`✅ ${added} employees imported${skipped>0?`, ${skipped} skipped`:''}`);
+      input.value='';loadEmployeesTab();
+    }catch(err){
+      notify('Failed to read Excel — check the format','err');input.value='';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function loadUsersTab(){
+  const users=await api('GET','/api/users');if(!users)return;
+  document.getElementById('users-body').innerHTML=`
+  <div class="card">
+    <div class="card-header"><i class="ti ti-users" style="font-size:16px;color:var(--text2)"></i><span class="card-title">System Users</span><span style="font-size:12px;color:var(--text2)">${users.length} users</span></div>
+    <div class="user-list" style="padding:16px">
+      ${users.map(u=>`<div class="user-row">
+        <div class="user-av-sm">${u.name.charAt(0).toUpperCase()}</div>
+        <div class="user-rinfo">
+          <div class="user-rname">${u.name}</div>
+          <div class="user-run"><i class="ti ti-at" style="font-size:12px"></i> ${u.username}
+            ${u.company?`&nbsp;<span style="font-size:11px;background:#fef3c7;color:#b45309;padding:1px 7px;border-radius:5px;font-weight:700"><i class="ti ti-building" style="font-size:11px"></i> ${u.company} only</span>`:'<span style="font-size:11px;color:var(--text3)">All companies</span>'}
+          </div>
+        </div>
+        <span class="rbadge ${u.role==='admin'?'rbadge-admin':'rbadge-junior'}">${u.role==='admin'?'Admin':'Junior'}</span>
+        <button class="btn btn-sm btn-icon" onclick="openEditUser(${u.id},'${u.name}','${u.username}','${u.role}','${u.company||''}')"><i class="ti ti-edit"></i></button>
+        ${u.id!==ME.id?`<button class="btn btn-sm btn-icon" style="color:var(--danger)" onclick="delUser(${u.id},'${u.name}')"><i class="ti ti-trash"></i></button>`:'<div style="width:34px"></div>'}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+function openAddUser(){
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-hicon"><i class="ti ti-user-plus"></i></div><div class="modal-title">Add New User</div><button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="fg"><label>Full Name *</label><input type="text" id="u_name" placeholder="e.g. Hassan Ahmed"></div>
+        <div class="fg"><label>Username *</label><input type="text" id="u_un" placeholder="e.g. hassan"></div>
+        <div class="fg"><label>Password *</label><input type="password" id="u_pw" placeholder="Set a strong password"></div>
+        <div class="fg"><label>Role *</label><select id="u_role" onchange="toggleCompanyField()">
+          <option value="junior">Junior — View + Add (no delete)</option>
+          <option value="admin">Admin — Full Access</option>
+        </select></div>
+        <div class="fg" id="company-field">
+          <label>Restrict to Company <span style="font-weight:400;color:var(--text3)">(leave blank for all companies)</span></label>
+          <select id="u_company">
+            <option value="">All Companies</option>
+            ${DATA.companies.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveNewUser()"><i class="ti ti-plus"></i>Create User</button></div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+}
+function toggleCompanyField(){
+  const role=document.getElementById('u_role');
+  const cf=document.getElementById('company-field');
+  if(cf)cf.style.display=role&&role.value==='admin'?'none':'flex';
+}
+
+function openEditUser(id,name,un,role,company){
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal modal-sm">
+    <div class="modal-header"><div class="modal-hicon"><i class="ti ti-user-edit"></i></div><div class="modal-title">Edit — ${name}</div><button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="fg"><label>Full Name</label><input type="text" id="u_name" value="${name}"></div>
+        <div class="fg"><label>Username</label><input type="text" id="u_un" value="${un}"></div>
+        <div class="fg"><label>New Password <span style="font-weight:400;color:var(--text3)">(blank = keep current)</span></label><input type="password" id="u_pw" placeholder="Leave blank to keep unchanged"></div>
+        <div class="fg"><label>Role</label><select id="u_role" onchange="toggleCompanyField()">
+          <option value="junior" ${role==='junior'?'selected':''}>Junior — View + Add (no delete)</option>
+          <option value="admin" ${role==='admin'?'selected':''}>Admin — Full Access</option>
+        </select></div>
+        <div class="fg" id="company-field" style="${role==='admin'?'display:none':''}">
+          <label>Restrict to Company <span style="font-weight:400;color:var(--text3)">(blank = all companies)</span></label>
+          <select id="u_company">
+            <option value="" ${!company?'selected':''}>All Companies</option>
+            ${DATA.companies.map(c=>`<option value="${c}" ${company===c?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveEditUser(${id})"><i class="ti ti-device-floppy"></i>Save</button></div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+}
+async function saveNewUser(){
+  const name=document.getElementById('u_name').value.trim(),un=document.getElementById('u_un').value.trim(),pw=document.getElementById('u_pw').value,role=document.getElementById('u_role').value;
+  const companyEl=document.getElementById('u_company');
+  const company=companyEl?companyEl.value:'';
+  if(!name||!un||!pw){notify('All fields required','err');return;}
+  const r=await api('POST','/api/users',{name,username:un,password:pw,role,company});
+  if(r&&r.success){notify('User created');closeModal();loadUsersTab();}else if(r){notify(r.error||'Failed','err');}
+}
+async function saveEditUser(id){
+  const name=document.getElementById('u_name').value.trim(),un=document.getElementById('u_un').value.trim(),pw=document.getElementById('u_pw').value,role=document.getElementById('u_role').value;
+  const companyEl=document.getElementById('u_company');
+  const company=companyEl?companyEl.value:'';
+  const body={name,username:un,role,company};if(pw)body.password=pw;
+  const r=await api('PUT',`/api/users/${id}`,body);
+  if(r&&r.success){notify('User updated');closeModal();loadUsersTab();}else if(r){notify(r.error||'Failed','err');}
+}
+async function delUser(id,name){
+  if(!confirm(`Delete user "${name}"?`))return;
+  const r=await api('DELETE',`/api/users/${id}`);
+  if(r&&r.success){notify(`User "${name}" deleted`);loadUsersTab();}
+}
+
+// ── SETTINGS ──
+function renderSettingsTab(){
+  const s=SETTINGS;
+  return`
+  <div class="settings-section">
+    <div class="settings-title"><i class="ti ti-building" style="color:var(--primary)"></i>General</div>
+    <div class="form-grid">
+      <div class="fg"><label>App / System Name</label><input type="text" id="s_appname" value="${s.appName||''}"></div>
+      <div class="fg"><label>Organization Name</label><input type="text" id="s_coname" value="${s.companyName||''}"></div>
+      <div class="fg full"><label>Office Address</label><input type="text" id="s_addr" value="${s.address||''}"></div>
+      <div class="fg"><label>Phone</label><input type="text" id="s_phone" value="${s.phone||''}"></div>
+      <div class="fg"><label>Email</label><input type="text" id="s_email" value="${s.email||''}"></div>
+    </div>
+    <div style="margin-top:16px"><button class="btn btn-primary" onclick="saveGeneralSettings()"><i class="ti ti-device-floppy"></i>Save General Settings</button></div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title"><i class="ti ti-photo" style="color:var(--primary)"></i>Main System Logo</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div id="main-logo-preview">
+        ${s.mainLogo?`<img src="${s.mainLogo}" class="logo-preview" alt="Logo">`:`<div class="logo-ph" onclick="document.getElementById('main-logo-input').click()"><i class="ti ti-upload"></i></div>`}
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">This logo appears in the top bar, sidebar, and login page.<br>Recommended: PNG with transparent background, square.</p>
+        <input type="file" id="main-logo-input" accept="image/*" style="display:none" onchange="uploadMainLogo(this)">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('main-logo-input').click()"><i class="ti ti-upload"></i>Upload Logo</button>
+          ${s.mainLogo?`<button class="btn btn-sm btn-danger" onclick="removeMainLogo()"><i class="ti ti-trash"></i>Remove</button>`:''}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title"><i class="ti ti-photo-video" style="color:var(--primary)"></i>Login Page Background</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Upload a photo of your office (or a collage) to show behind the login form. It's automatically darkened so the form stays readable.</p>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div id="login-bg-preview">
+        ${s.loginBackground?`<img src="${s.loginBackground}" style="width:140px;height:80px;border-radius:10px;object-fit:cover;border:1px solid var(--border)" alt="Login background">`:`<div class="logo-ph" style="width:140px;height:80px" onclick="document.getElementById('login-bg-input').click()"><i class="ti ti-upload"></i></div>`}
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:10px">Recommended: landscape photo, at least 1200×800px.<br>Office photos, team photos, or a collage all work well.</p>
+        <input type="file" id="login-bg-input" accept="image/*" style="display:none" onchange="uploadLoginBg(this)">
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('login-bg-input').click()"><i class="ti ti-upload"></i>${s.loginBackground?'Change':'Upload'} Background</button>
+          ${s.loginBackground?`<button class="btn btn-sm btn-danger" onclick="removeLoginBg()"><i class="ti ti-trash"></i>Remove</button>`:''}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title"><i class="ti ti-building-community" style="color:var(--primary)"></i>Company Logos</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Upload logos for each company. They appear in the sidebar and summary view.</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${DATA.companies.map(co=>{
+        const logo=(s.companyLogos||{})[co];
+        return`<div style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg);border-radius:9px;border:1px solid var(--border)">
+          ${logo?`<img src="${logo}" style="width:48px;height:48px;border-radius:8px;object-fit:contain;border:1px solid var(--border)">`:`<div style="width:48px;height:48px;border-radius:8px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:22px"><i class="ti ti-building"></i></div>`}
+          <div style="flex:1"><div style="font-weight:700">${co}</div><div style="font-size:12px;color:var(--text2)">${DATA.assets.filter(a=>a.company===co).length} assets</div></div>
+          <input type="file" id="co-logo-${co.replace(/\s/g,'_')}" accept="image/*" style="display:none" onchange="uploadCoLogo('${co}',this)">
+          <button class="btn btn-sm btn-primary" onclick="document.getElementById('co-logo-${co.replace(/\s/g,'_')}').click()"><i class="ti ti-upload"></i>${logo?'Change':'Upload'}</button>
+          ${logo?`<button class="btn btn-sm btn-danger" onclick="removeCoLogo('${co}')"><i class="ti ti-trash"></i></button>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title"><i class="ti ti-brand-slack" style="color:#4a154b"></i>Slack Notifications</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">When an asset is assigned or reassigned, a Slack notification is sent automatically to your IT channel — and optionally a direct message to the assigned person.</p>
+    <div style="background:#f9f0ff;border:1px solid #d4a9f5;border-radius:9px;padding:14px;margin-bottom:16px;font-size:13px">
+      <div style="font-weight:700;margin-bottom:6px;color:#4a154b"><i class="ti ti-info-circle"></i> How to get your Webhook URL:</div>
+      <ol style="padding-left:18px;color:#4a154b;line-height:1.9">
+        <li>Go to <strong>api.slack.com/apps</strong> → Create New App → From Scratch</li>
+        <li>Click <strong>Incoming Webhooks</strong> → Toggle ON</li>
+        <li>Click <strong>Add New Webhook to Workspace</strong> → Select your IT channel</li>
+        <li>Copy the Webhook URL and paste below</li>
+      </ol>
+    </div>
+    <div class="form-grid" style="max-width:700px">
+      <div class="fg full">
+        <label>Slack Webhook URL <span style="font-weight:400;color:var(--text3)">(for IT channel — gets all asset notifications)</span></label>
+        <input type="text" id="s_webhook" value="${s.slackWebhook||''}" placeholder="https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXX">
+      </div>
+      <div class="fg full">
+        <label>Slack Bot Name <span style="font-weight:400;color:var(--text3)">(shown as sender in Slack)</span></label>
+        <input type="text" id="s_botname" value="${s.slackBotName||'IT Asset Bot'}" placeholder="IT Asset Bot">
+      </div>
+      <div class="fg full">
+        <label>Notify Channel Name <span style="font-weight:400;color:var(--text3)">(just for display in messages e.g. #it-assets)</span></label>
+        <input type="text" id="s_channel" value="${s.slackChannel||'#it-assets'}" placeholder="#it-assets">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="saveSlackSettings()"><i class="ti ti-device-floppy"></i>Save Slack Settings</button>
+      <button class="btn" onclick="testSlackWebhook()" style="background:#4a154b;color:#fff;border-color:#4a154b"><i class="ti ti-send"></i>Send Test Message</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-title"><i class="ti ti-lock" style="color:var(--primary)"></i>Change Admin Password</div>
+    <div class="form-grid" style="max-width:500px">
+      <div class="fg full"><label>Current Password</label><input type="password" id="s_oldpw" placeholder="Enter current password"></div>
+      <div class="fg"><label>New Password</label><input type="password" id="s_newpw" placeholder="New password"></div>
+      <div class="fg"><label>Confirm New Password</label><input type="password" id="s_newpw2" placeholder="Confirm new password"></div>
+    </div>
+    <div style="margin-top:14px"><button class="btn btn-primary" onclick="changeAdminPw()"><i class="ti ti-lock"></i>Change Password</button></div>
+  </div>`;
+}
+
+function bindSettingsEvents(){}
+
+async function saveGeneralSettings(){
+  const g=x=>document.getElementById(x);
+  SETTINGS={...SETTINGS,appName:g('s_appname').value.trim(),companyName:g('s_coname').value.trim(),address:g('s_addr').value.trim(),phone:g('s_phone').value.trim(),email:g('s_email').value.trim()};
+  const r=await api('POST','/api/settings',SETTINGS);
+  if(r&&r.success){notify('Settings saved');applySettings();}else{notify('Failed to save','err');}
+}
+
+async function saveSlackSettings(){
+  const g=x=>document.getElementById(x);
+  SETTINGS={...SETTINGS,
+    slackWebhook:g('s_webhook').value.trim(),
+    slackBotName:g('s_botname').value.trim()||'IT Asset Bot',
+    slackChannel:g('s_channel').value.trim()||'#it-assets'
+  };
+  const r=await api('POST','/api/settings',SETTINGS);
+  if(r&&r.success){notify('Slack settings saved ✅');}else{notify('Failed to save','err');}
+}
+
+async function testSlackWebhook(){
+  if(!SETTINGS.slackWebhook){notify('Please enter and save a Webhook URL first','err');return;}
+  const ok=await sendSlackMessage({
+    text:`🔔 *IT Asset Inventory — Test Message*\nYour Slack integration is working! Notifications will be sent here when assets are assigned or reassigned.\n_Sent from: ${SETTINGS.appName||'IT Asset Inventory'}_`
+  });
+  if(ok){notify('✅ Test message sent to Slack!');}else{notify('❌ Failed — check your Webhook URL','err');}
+}
+
+async function sendSlackMessage(payload){
+  if(!SETTINGS.slackWebhook)return false;
+  try{
+    // Use server as proxy to avoid CORS
+    const r=await fetch('/api/slack',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-session':TOKEN},
+      body:JSON.stringify({webhook:SETTINGS.slackWebhook,payload})
+    });
+    return r.ok;
+  }catch(e){return false;}
+}
+
+async function notifySlackAssetChange(asset, prevAsset){
+  if(!SETTINGS.slackWebhook)return;
+  const isNew=!prevAsset;
+  const wasAssigned=prevAsset&&prevAsset.assignedTo;
+  const nowAssigned=asset.assignedTo;
+  const channel=SETTINGS.slackChannel||'#it-assets';
+  const botName=SETTINGS.slackBotName||'IT Asset Bot';
+
+  // Find slack IDs from employee data
+  const d=await api('GET','/api/data');
+  const employees=d.employees||[];
+  const findSlack=(name)=>{
+    if(!name)return null;
+    const emp=employees.find(e=>e.name&&e.name.toLowerCase()===name.toLowerCase());
+    return emp&&emp.slack?emp.slack:null;
+  };
+
+  const newSlack=findSlack(nowAssigned);
+  const oldSlack=findSlack(wasAssigned);
+  const assetInfo=`*${asset.brand} ${asset.model}*\nType: ${asset.type} | Serial: ${asset.serial||'N/A'} | LCD Tag 1: ${asset.assetTag||'N/A'} | System Tag: ${asset.systemTag||'N/A'}\nLocation: ${asset.location}${asset.floor?', '+asset.floor:''}`;
+
+  let messages=[];
+
+  if(isNew&&nowAssigned){
+    // New asset added and assigned
+    messages.push({
+      text:`🆕 *New Asset Assigned*\n${assetInfo}\n✅ Assigned to: *${nowAssigned}*${newSlack?' ('+newSlack+')':''}\nCompany: ${asset.company}`
+    });
+    // DM to new assignee
+    if(newSlack){
+      messages.push({
+        text:`👋 Hi ${newSlack}! A new asset has been assigned to you:\n${assetInfo}\nIf you have any questions contact the IT team.`
+      });
+    }
+  } else if(!isNew&&nowAssigned&&wasAssigned&&wasAssigned!==nowAssigned){
+    // Reassigned from one person to another
+    messages.push({
+      text:`🔄 *Asset Reassigned* on ${channel}\n${assetInfo}\n❌ Removed from: *${wasAssigned}*${oldSlack?' ('+oldSlack+')':''}\n✅ Now assigned to: *${nowAssigned}*${newSlack?' ('+newSlack+')':''}\nCompany: ${asset.company}`
+    });
+    // Notify previous person
+    if(oldSlack){
+      messages.push({
+        text:`📢 Hi ${oldSlack}, your asset has been reassigned:\n${assetInfo}\nThis asset is now assigned to *${nowAssigned}*. Please hand it over to the IT team if not done already.`
+      });
+    }
+    // Notify new person
+    if(newSlack){
+      messages.push({
+        text:`👋 Hi ${newSlack}! An asset has been assigned to you:\n${assetInfo}\nPreviously used by: *${wasAssigned}*. Contact IT team for handover.`
+      });
+    }
+  } else if(!isNew&&nowAssigned&&!wasAssigned){
+    // Was free, now assigned
+    messages.push({
+      text:`✅ *Asset Allocated* on ${channel}\n${assetInfo}\nAssigned to: *${nowAssigned}*${newSlack?' ('+newSlack+')':''}\nCompany: ${asset.company}`
+    });
+    if(newSlack){
+      messages.push({
+        text:`👋 Hi ${newSlack}! An asset has been allocated to you:\n${assetInfo}\nContact IT team if you need setup support.`
+      });
+    }
+  } else if(!isNew&&!nowAssigned&&wasAssigned){
+    // Unassigned
+    messages.push({
+      text:`🔓 *Asset Unassigned* on ${channel}\n${assetInfo}\nReturned by: *${wasAssigned}*${oldSlack?' ('+oldSlack+')':''}\nStatus: *${asset.status}*`
+    });
+    if(oldSlack){
+      messages.push({
+        text:`📢 Hi ${oldSlack}, your asset *${asset.brand} ${asset.model}* has been returned to IT inventory. Thank you!`
+      });
+    }
+  }
+
+  // Send all messages
+  for(const msg of messages){
+    await sendSlackMessage({...msg,username:botName,icon_emoji:':desktop_computer:'});
+  }
+}
+
+function uploadMainLogo(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    SETTINGS={...SETTINGS,mainLogo:e.target.result};
+    const r=await api('POST','/api/settings',SETTINGS);
+    if(r&&r.success){notify('Logo uploaded');applySettings();setTab('settings');}else{notify('Failed','err');}
+  };reader.readAsDataURL(file);
+}
+async function removeMainLogo(){
+  SETTINGS={...SETTINGS,mainLogo:''};
+  const r=await api('POST','/api/settings',SETTINGS);
+  if(r&&r.success){notify('Logo removed');applySettings();setTab('settings');}
+}
+function uploadLoginBg(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    SETTINGS={...SETTINGS,loginBackground:e.target.result};
+    const r=await api('POST','/api/settings',SETTINGS);
+    if(r&&r.success){notify('Login background updated ✅');setTab('settings');}else{notify('Failed to save — image may be too large','err');}
+  };reader.readAsDataURL(file);
+}
+async function removeLoginBg(){
+  SETTINGS={...SETTINGS,loginBackground:''};
+  const r=await api('POST','/api/settings',SETTINGS);
+  if(r&&r.success){notify('Login background removed');setTab('settings');}
+}
+function uploadCoLogo(co,input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    SETTINGS={...SETTINGS,companyLogos:{...SETTINGS.companyLogos,[co]:e.target.result}};
+    const r=await api('POST','/api/settings',SETTINGS);
+    if(r&&r.success){notify(`Logo for ${co} uploaded`);renderSidebar();setTab('settings');}else{notify('Failed','err');}
+  };reader.readAsDataURL(file);
+}
+async function removeCoLogo(co){
+  const logos={...SETTINGS.companyLogos};delete logos[co];
+  SETTINGS={...SETTINGS,companyLogos:logos};
+  const r=await api('POST','/api/settings',SETTINGS);
+  if(r&&r.success){notify(`Logo for ${co} removed`);renderSidebar();setTab('settings');}
+}
+async function changeAdminPw(){
+  const oldpw=document.getElementById('s_oldpw').value;
+  const newpw=document.getElementById('s_newpw').value;
+  const newpw2=document.getElementById('s_newpw2').value;
+  if(!oldpw||!newpw||!newpw2){notify('All password fields required','err');return;}
+  if(newpw!==newpw2){notify('New passwords do not match','err');return;}
+  if(newpw.length<6){notify('Password must be at least 6 characters','err');return;}
+  // Verify old password by logging in
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:ME.username,password:oldpw})});
+    if(!r.ok){notify('Current password is incorrect','err');return;}
+  }catch(e){notify('Error verifying password','err');return;}
+  const r=await api('PUT',`/api/users/${ME.id}`,{password:newpw,name:ME.name,username:ME.username,role:ME.role});
+  if(r&&r.success){notify('Password changed successfully');document.getElementById('s_oldpw').value='';document.getElementById('s_newpw').value='';document.getElementById('s_newpw2').value='';}
+  else{notify('Failed to change password','err');}
+}
+
+// ── EXPORT ──
+function openExportModal(){
+  const cos = DATA.companies || [];
+  const curCo = (UI.company && UI.company !== '__ALL__') ? UI.company : '';
+  document.getElementById('modal-root').innerHTML = `
+  <div class="modal-overlay" id="mo"><div class="modal">
+    <div class="modal-header">
+      <div class="modal-hicon" style="background:#e8f5e9;color:#1b5e20"><i class="ti ti-download"></i></div>
+      <div class="modal-title">Export Assets</div>
+      <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <div class="exp-section-title">Export format</div>
+      <div class="exp-format-row">
+        <div class="exp-format-btn selected" id="exp-fmt-excel" onclick="selectExpFmt('excel')">
+          <i class="ti ti-file-spreadsheet" style="color:#1b7f3a"></i>
+          <div class="exp-fmt-lbl">Excel</div>
+          <div class="exp-fmt-sub">.xlsx file</div>
+        </div>
+        <div class="exp-format-btn" id="exp-fmt-pdf" onclick="selectExpFmt('pdf')">
+          <i class="ti ti-file-type-pdf" style="color:#c62828"></i>
+          <div class="exp-fmt-lbl">PDF</div>
+          <div class="exp-fmt-sub">Print-ready</div>
+        </div>
+        <div class="exp-format-btn" id="exp-fmt-csv" onclick="selectExpFmt('csv')">
+          <i class="ti ti-file-text" style="color:#1565c0"></i>
+          <div class="exp-fmt-lbl">CSV</div>
+          <div class="exp-fmt-sub">Raw data</div>
+        </div>
+      </div>
+
+      <div class="exp-section-title">Filter data to export</div>
+      <div class="exp-filter-grid">
+        <div class="exp-filter-item">
+          <label><i class="ti ti-building" style="font-size:11px"></i> Company</label>
+          <select id="exp-co" onchange="updateExpPreview()">
+            <option value="">All Companies</option>
+            ${cos.map(c => `<option value="${c}" ${c===curCo?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="exp-filter-item">
+          <label><i class="ti ti-circle-dot" style="font-size:11px"></i> Status</label>
+          <select id="exp-status" onchange="updateExpPreview()">
+            <option value="">All Statuses</option>
+            ${STATUS_LIST.map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="exp-filter-item">
+          <label><i class="ti ti-cpu" style="font-size:11px"></i> Asset Type</label>
+          <select id="exp-type" onchange="updateExpPreview()">
+            <option value="">All Types</option>
+            ${ASSET_TYPES.map(t => `<option value="${t}">${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="exp-filter-item">
+          <label><i class="ti ti-stairs" style="font-size:11px"></i> Floor / Location</label>
+          <select id="exp-floor" onchange="updateExpPreview()">
+            <option value="">All Floors</option>
+            ${FLOORS.map(f => `<option value="${f}">${f}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div id="exp-preview-info" style="margin-top:12px"></div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="exp-do-btn" onclick="doExport()">
+        <i class="ti ti-download"></i> Export
+      </button>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click', e=>{ if(e.target.id==='mo') closeModal(); });
+  // Set selects to match current UI filters
+  if(UI.fStatus) document.getElementById('exp-status').value = UI.fStatus;
+  if(UI.fType)   document.getElementById('exp-type').value   = UI.fType;
+  if(UI.fFloor)  document.getElementById('exp-floor').value  = UI.fFloor;
+  updateExpPreview();
+}
+
+let EXP_FMT = 'excel';
+
+function selectExpFmt(fmt){
+  EXP_FMT = fmt;
+  ['excel','pdf','csv'].forEach(f => {
+    const el = document.getElementById('exp-fmt-'+f);
+    if(el) el.classList.toggle('selected', f===fmt);
+  });
+}
+
+function getExpAssets(){
+  const co     = document.getElementById('exp-co')?.value     || '';
+  const status = document.getElementById('exp-status')?.value || '';
+  const type   = document.getElementById('exp-type')?.value   || '';
+  const floor  = document.getElementById('exp-floor')?.value  || '';
+  return DATA.assets.filter(a => {
+    if(co     && a.company !== co)     return false;
+    if(status && a.status  !== status) return false;
+    if(type   && a.type    !== type)   return false;
+    if(floor  && a.floor   !== floor)  return false;
+    return true;
+  });
+}
+
+function updateExpPreview(){
+  const assets = getExpAssets();
+  const co     = document.getElementById('exp-co')?.value     || '';
+  const status = document.getElementById('exp-status')?.value || '';
+  const type   = document.getElementById('exp-type')?.value   || '';
+  const floor  = document.getElementById('exp-floor')?.value  || '';
+  const parts  = [];
+  if(co)     parts.push(co);
+  if(status) parts.push(status);
+  if(type)   parts.push(type);
+  if(floor)  parts.push(floor);
+  const label = parts.length ? parts.join(' · ') : 'All Assets';
+  const el = document.getElementById('exp-preview-info');
+  if(el) el.innerHTML = assets.length
+    ? `<div class="exp-preview-pill"><i class="ti ti-table"></i> ${assets.length} assets will be exported &nbsp;·&nbsp; ${label}</div>`
+    : `<div class="exp-preview-pill" style="background:var(--danger-light);color:var(--danger)"><i class="ti ti-alert-circle"></i> No assets match these filters</div>`;
+  const btn = document.getElementById('exp-do-btn');
+  if(btn) btn.disabled = !assets.length;
+}
+
+function doExport(){
+  const assets = getExpAssets();
+  const co     = document.getElementById('exp-co')?.value     || '';
+  const status = document.getElementById('exp-status')?.value || '';
+  const type   = document.getElementById('exp-type')?.value   || '';
+  const floor  = document.getElementById('exp-floor')?.value  || '';
+  if(!assets.length){ notify('No assets match filters','err'); return; }
+  const parts = [];
+  if(co)     parts.push(co);
+  if(status) parts.push(status);
+  if(type)   parts.push(type);
+  if(floor)  parts.push(floor);
+  const label      = parts.length ? parts.join('_') : 'All_Companies';
+  const labelHuman = parts.length ? parts.join(' · ') : 'All Companies';
+  const showCo     = !co;
+  const date       = new Date().toISOString().slice(0,10);
+  closeModal();
+  if(EXP_FMT==='excel') runExportExcel(assets, label, showCo, date);
+  else if(EXP_FMT==='pdf') runExportPDF(assets, labelHuman, showCo, date, co||'All Companies');
+  else runExportCSV(assets, label, showCo, date);
+}
+
+function runExportCSV(assets, label, showCo, date){
+  const headers = ['#',...(showCo?['Company']:[]),'Type','Brand','Model','Device Specs',
+    'GPU','RAM','SSD','Secondary HDD','Serial No','LCD Tag 1','LCD Tag 2',
+    'System Tag','Previous Tag','Location','Floor','Status',
+    'Assigned To','Last Assigned To','Vendor','Vendor Contact',
+    'Purchase Price (PKR)','Current Market Value (PKR)','Purchase Date','Notes'];
+  const esc = v => `"${String(v||'').replace(/"/g,'""')}"`;
+  const lines = [headers.map(esc).join(',')];
+  assets.forEach((a,i) => {
+    lines.push([
+      i+1,...(showCo?[a.company]:[]),
+      a.type,a.brand,a.model,a.deviceSpecs||'',
+      a.gpu||'',a.ram||'',a.ssd||'',a.hdd||'',a.serial||'',
+      a.assetTag||'',a.assetTag2||'',a.systemTag||'',a.prevTag||'',
+      a.location,a.floor||'',a.status,
+      a.assignedTo||'',a.lastAssigned||'',a.vendorName||'',a.vendorContact||'',
+      a.purchasePrice||'',a.marketValue||'',a.purchaseDate||'',a.notes||''
+    ].map(esc).join(','));
+  });
+  const blob = new Blob([lines.join('\r\n')], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`IT_Inventory_${label}_${date}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  notify('CSV exported');
+}
+
+function runExportExcel(assets, label, showCo, date){
+  const rows = assets.map((a,i)=>({
+    '#':i+1,...(showCo?{'Company':a.company}:{}),
+    'Type':a.type,'Brand':a.brand,'Model':a.model,
+    'Device Specs':a.deviceSpecs||'-','GPU':a.gpu||'-','RAM':a.ram||'-',
+    'SSD':a.ssd||'-','Secondary HDD':a.hdd||'-','Serial No':a.serial||'-',
+    'LCD Tag 1':a.assetTag||'-','LCD Tag 2':a.assetTag2||'-',
+    'System Tag':a.systemTag||'-','Previous Tag':a.prevTag||'-',
+    'Location':a.location,'Floor':a.floor||'-','Status':a.status,
+    'Assigned To':a.assignedTo||'-','Last Assigned To':a.lastAssigned||'-',
+    'Vendor':a.vendorName||'-','Vendor Contact':a.vendorContact||'-',
+    'Purchase Price (PKR)':a.purchasePrice||'-',
+    'Current Market Value (PKR)':a.marketValue||'-',
+    'Purchase Date':a.purchaseDate||'-','Notes':a.notes||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,label.substring(0,31));
+  XLSX.writeFile(wb,`IT_Inventory_${label}_${date}.xlsx`);
+  notify('Excel exported');
+}
+
+function runExportPDF(assets, labelHuman, showCo, date, coName){
+  const{jsPDF}=window.jspdf;
+  const s = (() => {
+    const all=assets;
+    return{total:all.length,allotted:all.filter(a=>a.status==='Allotted').length,
+      free:all.filter(a=>a.status==='Free / Spare').length,
+      repair:all.filter(a=>a.status==='Under Repair').length};
+  })();
+  const addr    = SETTINGS.address||'Your Office Address Here';
+  const docDate = new Date().toLocaleDateString('en-PK',{dateStyle:'long'});
+
+  function addHeader(doc,title,subtitle){
+    doc.setFillColor(15,32,64);doc.rect(0,0,297,26,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont(undefined,'bold');
+    doc.text(title,10,12);
+    doc.setFontSize(8);doc.setFont(undefined,'normal');
+    doc.text(addr,10,19);
+    doc.text(`Generated: ${docDate}`,200,12);
+    doc.text(subtitle,200,19);
+    doc.setTextColor(30,41,59);doc.setFontSize(8);
+    doc.text(`Total: ${s.total}  |  Allotted: ${s.allotted}  |  Free/Spare: ${s.free}  |  Repair: ${s.repair}`,10,31);
+  }
+
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  addHeader(doc,`IT Asset Inventory — ${labelHuman}`,'Asset Register — Full Details');
+  doc.autoTable({
+    startY:35,
+    head:[[
+      '#',...(showCo?['Company']:[]),
+      'Type','Brand','Model','Device Specs','RAM','SSD','HDD','GPU',
+      'LCD Tag 1','LCD Tag 2','System Tag','Prev Tag','Serial No',
+      'Assigned To','Last Assigned','Status'
+    ]],
+    body:assets.map((a,i)=>[
+      i+1,...(showCo?[a.company]:[]),
+      a.type,a.brand,a.model,a.deviceSpecs||'-',
+      a.ram||'-',a.ssd||'-',a.hdd||'-',a.gpu||'-',
+      a.assetTag||'-',a.assetTag2||'-',a.systemTag||'-',a.prevTag||'-',
+      a.serial||'-',a.assignedTo||'—',a.lastAssigned||'—',a.status
+    ]),
+    theme:'grid',
+    headStyles:{fillColor:[15,32,64],textColor:255,fontSize:6,fontStyle:'bold',cellPadding:2},
+    bodyStyles:{fontSize:6,cellPadding:2},
+    alternateRowStyles:{fillColor:[248,250,252]},
+    columnStyles:{0:{cellWidth:6},...(showCo?{1:{cellWidth:16}}:{})},
+    margin:{left:6,right:6},
+    didDrawPage:(d)=>{doc.setFontSize(7);doc.setTextColor(150);doc.text(`Page ${d.pageNumber}`,148,205,{align:'center'});}
+  });
+  doc.save(`IT_Inventory_${labelHuman.replace(/[^a-zA-Z0-9]/g,'_')}_${date}.pdf`);
+  notify('PDF exported successfully');
+}
+
+function exportExcel(){
+  const showAll=UI.company==='__ALL__'||!UI.company;
+  const assets=filtered();
+  const label=showAll?'All_Companies':UI.company;
+  if(!assets.length){notify('No assets to export','err');return;}
+  const rows=assets.map((a,i)=>({
+    '#':i+1,
+    'Company':a.company,
+    'Type':a.type,'Brand':a.brand,'Model':a.model,
+    'Device Specs':a.deviceSpecs||'-',
+    'GPU':a.gpu||'-','RAM':a.ram||'-','SSD':a.ssd||'-','Secondary HDD':a.hdd||'-',
+    'Serial No':a.serial||'-',
+    'LCD Tag 1':a.assetTag||'-','LCD Tag 2':a.assetTag2||'-',
+    'System Tag':a.systemTag||'-','Previous Tag':a.prevTag||'-',
+    'Location':a.location,'Floor':a.floor||'-',
+    'Status':a.status,
+    'Assigned To':a.assignedTo||'-',
+    'Last Assigned To':a.lastAssigned||'-',
+    'Vendor':a.vendorName||'-','Vendor Contact':a.vendorContact||'-',
+    'Purchase Price (PKR)':a.purchasePrice||'-',
+    'Current Market Value (PKR)':a.marketValue||'-',
+    'Purchase Date':a.purchaseDate||'-',
+    'Notes':a.notes||''
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,label.substring(0,31));
+  XLSX.writeFile(wb,`IT_Inventory_${label}_${new Date().toISOString().slice(0,10)}.xlsx`);notify('Excel exported');
+}
+function exportPDF(){
+  const showAll=UI.company==='__ALL__'||!UI.company;
+  const assets=filtered();
+  const label=showAll?'All Companies':UI.company;
+  if(!assets.length){notify('No assets to export','err');return;}
+  const{jsPDF}=window.jspdf;
+  const s=showAll?coStats('__ALL__'):coStats(UI.company);
+  const date=new Date().toLocaleDateString('en-PK',{dateStyle:'long'});
+  const addr=SETTINGS.address||'Your Office Address Here';
+
+  function addHeader(doc,title,subtitle){
+    doc.setFillColor(15,32,64);doc.rect(0,0,297,26,'F');
+    doc.setTextColor(255,255,255);doc.setFontSize(13);doc.setFont(undefined,'bold');
+    doc.text(title,10,12);
+    doc.setFontSize(8);doc.setFont(undefined,'normal');
+    doc.text(addr,10,19);
+    doc.text(`Generated: ${date}`,200,12);
+    doc.text(subtitle,200,19);
+    doc.setTextColor(30,41,59);doc.setFontSize(8);
+    doc.text(`Total: ${s.total}  |  Allotted: ${s.allotted}  |  Free/Spare: ${s.free}  |  Repair: ${s.repair}`,10,31);
+  }
+
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+
+  // ── PAGE 1: Everything on one page ──
+  addHeader(doc,`IT Asset Inventory — ${label}`,'Asset Register — Full Details');
+  doc.autoTable({
+    startY:35,
+    head:[[
+      '#',
+      ...(showAll?['Company']:[]),
+      'Type','Brand','Model','Device Specs','RAM','SSD','HDD','GPU',
+      'LCD Tag 1','LCD Tag 2','System Tag','Prev Tag','Serial No',
+      'Assigned To','Last Assigned To','Status'
+    ]],
+    body:assets.map((a,i)=>[
+      i+1,
+      ...(showAll?[a.company]:[]),
+      a.type,a.brand,a.model,
+      a.deviceSpecs||'-',
+      a.ram||'-',a.ssd||'-',a.hdd||'-',a.gpu||'-',
+      a.assetTag||'-',a.assetTag2||'-',
+      a.systemTag||'-',a.prevTag||'-',
+      a.serial||'-',
+      a.assignedTo||'—',
+      a.lastAssigned||'—',
+      a.status
+    ]),
+    theme:'grid',
+    headStyles:{fillColor:[15,32,64],textColor:255,fontSize:6,fontStyle:'bold',cellPadding:2},
+    bodyStyles:{fontSize:6,cellPadding:2},
+    alternateRowStyles:{fillColor:[248,250,252]},
+    columnStyles:{0:{cellWidth:6},...(showAll?{1:{cellWidth:16}}:{})},
+    margin:{left:6,right:6},
+    didDrawPage:(d)=>{doc.setFontSize(7);doc.setTextColor(150);doc.text(`Page ${d.pageNumber}`,148,205,{align:'center'});}
+  });
+
+  doc.save(`IT_Inventory_${label.replace(/ /g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  notify('PDF exported successfully');
+}
+
+// ── MISC ──
+function updateTicker(){
+  const el=document.getElementById('ticker-inner');
+  if(!el)return;
+  const all=DATA.assets;
+  const co=DATA.companies;
+  const total=all.length;
+  const allotted=all.filter(a=>a.status==='Allotted').length;
+  const free=all.filter(a=>a.status==='Free / Spare').length;
+  const repair=all.filter(a=>a.status==='Under Repair').length;
+  const retired=all.filter(a=>a.status==='Retired').length;
+  // Per company stats
+  const coStats_t=co.map(c=>{
+    const a=all.filter(x=>x.company===c);
+    return{name:c,total:a.length,allotted:a.filter(x=>x.status==='Allotted').length,free:a.filter(x=>x.status==='Free / Spare').length};
+  });
+  // Type counts
+  const cpus=all.filter(a=>CPU_TYPES.includes(a.type)).length;
+  const apple=all.filter(a=>APPLE_TYPES.includes(a.type)).length;
+  const windows=all.filter(a=>WINDOWS_TYPES.includes(a.type)).length;
+  const lcds=all.filter(a=>LCD_TYPES.includes(a.type)||(a.assetTag&&a.assetTag.trim())||(a.assetTag2&&a.assetTag2.trim())).length;
+  const servers=all.filter(a=>SERVER_TYPES.includes(a.type)).length;
+  const mobiles=all.filter(a=>TESTING_TYPES.includes(a.type)).length;
+  const employees=(DATA.employees||[]).length;
+
+  const sep='<span class="ticker-sep">|</span>';
+
+  const items=[
+    {icon:'ti-database',label:'Total Assets',val:total,cls:'red',action:'clearF()'},
+    {icon:'ti-user-check',label:'Allotted',val:allotted,cls:'red',action:"UI.fStatus='Allotted';UI.fTypes=null;reTable()"},
+    {icon:'ti-circle-check',label:'Free / Spare',val:free,cls:'green',action:"UI.fStatus='Free / Spare';UI.fTypes=null;reTable()"},
+    {icon:'ti-tool',label:'Under Repair',val:repair,cls:'orange',action:"UI.fStatus='Under Repair';UI.fTypes=null;reTable()"},
+    {icon:'ti-archive',label:'Retired',val:retired,cls:'gray',action:"UI.fStatus='Retired';UI.fTypes=null;reTable()"},
+    {icon:'ti-device-desktop',label:'Total CPU',val:cpus,cls:'red',action:'filterByTypes(CPU_TYPES)'},
+    {icon:'ti-brand-apple',label:'Apple Devices',val:apple,cls:'gray',action:'filterByTypes(APPLE_TYPES)'},
+    {icon:'ti-brand-windows',label:'Windows Laptop',val:windows,cls:'teal',action:'filterByTypes(WINDOWS_TYPES)'},
+    {icon:'ti-device-tv',label:'Total LCD',val:lcds,cls:'teal',action:'openLcdModal()'},
+    {icon:'ti-server',label:'Servers',val:servers,cls:'orange',action:'filterByTypes(SERVER_TYPES)'},
+    {icon:'ti-device-mobile',label:'Testing Devices',val:mobiles,cls:'purple',action:'filterByTypes(TESTING_TYPES)'},
+    {icon:'ti-id-badge',label:'Employees',val:employees,cls:'green',action:"setTab('employees')"},
+    {icon:'ti-building',label:'Companies',val:co.length,cls:'red',action:"setTab('summary')"},
+    ...coStats_t.map(c=>({icon:'ti-building',label:c.name,val:`${c.total} assets`,cls:'gray',sub:`${c.allotted} allotted · ${c.free} free`,action:`switchCo('${c.name}')`})),
+  ];
+
+  // Build items HTML — duplicated for seamless loop
+  const makeItem=(item)=>`
+    <span class="ticker-item" onclick="${item.action};setTab('assets')" title="Click to filter">
+      <i class="ti ${item.icon}" style="color:#888;font-size:13px"></i>
+      <span style="color:#aaa;font-size:11px">${item.label}</span>
+      <span class="tv ${item.cls}">${item.val}</span>
+      ${item.sub?`<span style="color:#666;font-size:10px">(${item.sub})</span>`:''}
+    </span>${sep}`;
+
+  const html=items.map(makeItem).join('');
+  el.innerHTML=html+html; // duplicate for seamless infinite scroll
+}
+
+
+
+// ── LOGIN BRANDING (loaded before login, no auth needed) ──
+async function loadLoginBranding(){
+  try{
+    const r=await fetch('/api/branding');
+    if(!r.ok)return;
+    const b=await r.json();
+    document.getElementById('lp-appname').textContent=b.appName||'IT Asset Inventory';
+    document.getElementById('lp-coname').textContent=b.companyName||'';
+    document.getElementById('lp-addr').textContent=b.address||'';
+    if(b.mainLogo){
+      document.getElementById('login-logo-wrap').outerHTML=`<img id="login-logo-wrap" src="${b.mainLogo}" class="login-logo-img" alt="Logo">`;
+    }
+    if(b.loginBackground){
+      const bg=document.getElementById('login-bg-layer');
+      bg.style.backgroundImage=`url('${b.loginBackground}')`;
+      bg.classList.add('show');
+    }
+    // Cache for instant display next time
+    sessionStorage.setItem('login_branding',JSON.stringify(b));
+  }catch(e){}
+}
+
+// Show cached branding instantly while fresh data loads
+function applyCachedBranding(){
+  try{
+    const cached=sessionStorage.getItem('login_branding');
+    if(!cached)return;
+    const b=JSON.parse(cached);
+    document.getElementById('lp-appname').textContent=b.appName||'IT Asset Inventory';
+    document.getElementById('lp-coname').textContent=b.companyName||'';
+    document.getElementById('lp-addr').textContent=b.address||'';
+    if(b.mainLogo){
+      document.getElementById('login-logo-wrap').outerHTML=`<img id="login-logo-wrap" src="${b.mainLogo}" class="login-logo-img" alt="Logo">`;
+    }
+    if(b.loginBackground){
+      const bg=document.getElementById('login-bg-layer');
+      bg.style.backgroundImage=`url('${b.loginBackground}')`;
+      bg.classList.add('show');
+    }
+  }catch(e){}
+}
+
+// ── BOOT CHECK ──
+(async()=>{
+  applyCachedBranding();
+  loadLoginBranding();
+  if(TOKEN){
+    try{
+      const r=await fetch('/api/me',{headers:{'x-session':TOKEN}});
+      if(r.ok){ME=await r.json();bootApp();return;}
+    }catch(e){}
+  }
+  document.getElementById('login-page').style.display='flex';
+})();
+
+
+// ── EXCEL IMPORT ──────────────────────────────────────────────
+const IMP_COL_MAP={
+  "type":"type","asset type":"type",
+  "brand":"brand","make":"brand","manufacturer":"brand",
+  "model":"model","model / device description":"model","device description":"model",
+  "device specs":"deviceSpecs","specs":"deviceSpecs","specifications":"deviceSpecs","processor":"deviceSpecs",
+  "gpu":"gpu","graphics":"gpu","graphic card":"gpu","graphics card":"gpu",
+  "ram":"ram","memory":"ram",
+  "ssd":"ssd",
+  "secondary hdd":"hdd","hdd":"hdd","hard disk":"hdd",
+  "serial no":"serial","serial":"serial","serial number":"serial",
+  "lcd tag 1":"assetTag","asset tag":"assetTag","tag":"assetTag","lcd tag":"assetTag",
+  "lcd tag 2":"assetTag2","asset tag 2":"assetTag2","tag 2":"assetTag2",
+  "system tag":"systemTag","cpu tag":"systemTag",
+  "previous tag":"prevTag","prev tag":"prevTag","old tag":"prevTag",
+  "company":"company","location":"location","floor":"floor","status":"status",
+  "assigned to":"assignedTo","assigned":"assignedTo","user":"assignedTo","employee":"assignedTo",
+  "last assigned to":"lastAssigned","last assigned":"lastAssigned","previous user":"lastAssigned",
+  "vendor":"vendorName","vendor name":"vendorName","vendor / supplier name":"vendorName","supplier":"vendorName",
+  "vendor contact":"vendorContact","vendor phone":"vendorContact",
+  "purchase price":"purchasePrice","purchase price (pkr)":"purchasePrice","price":"purchasePrice","cost":"purchasePrice",
+  "current market value (pkr)":"marketValue","market value":"marketValue","value":"marketValue",
+  "purchase date":"purchaseDate","date":"purchaseDate","date purchased":"purchaseDate",
+  "notes":"notes","remarks":"notes","comments":"notes"
+};
+
+let IMP_PREVIEW_ROWS=[];
+
+function openImportExcel(){
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal">
+    <div class="modal-header">
+      <div class="modal-hicon" style="background:#e0f7fa;color:#0e7490"><i class="ti ti-table-import"></i></div>
+      <div class="modal-title">Import Assets from Excel / CSV</div>
+      <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="imp-step-1">
+        <div class="imp-hint">
+          <strong>Accepted:</strong> .xlsx · .xls · .csv · Max 10MB<br>
+          Column headers are flexible — "Brand", "Make", "Manufacturer" all work.<br>
+          <strong>Required columns:</strong> Brand &amp; Model &nbsp;·&nbsp;
+          <a href="#" onclick="event.preventDefault();downloadImportTemplate()">⬇ Download template</a>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px 14px">
+          <i class="ti ti-building" style="font-size:18px;color:#0e7490;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Target Company</div>
+            <select id="imp-company" style="width:100%;height:34px;border:1px solid var(--border2);border-radius:7px;padding:0 10px;font-size:13px;background:var(--surface);color:var(--text)">
+              <option value="">— Use company from file (per row) —</option>
+              ${DATA.companies.map(c=>`<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--text3);max-width:160px;line-height:1.5">Select a company to assign <em>all</em> imported rows to it, or leave blank to use each row's own Company column.</div>
+        </div>
+        <div class="imp-drop" id="imp-drop" onclick="document.getElementById('imp-file').click()">
+          <div class="imp-drop-icon"><i class="ti ti-upload"></i></div>
+          <div class="imp-drop-text">Click to choose file or drag &amp; drop</div>
+          <div class="imp-drop-sub">.xlsx &nbsp;·&nbsp; .xls &nbsp;·&nbsp; .csv</div>
+          <input type="file" id="imp-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportFile(this.files[0])">
+        </div>
+        <div id="imp-status" style="font-size:13px;color:var(--text2);min-height:20px;margin-top:8px"></div>
+      </div>
+
+      <div id="imp-step-2" style="display:none">
+        <div id="imp-co-banner" style="display:flex;align-items:center;gap:8px;background:#e0f7fa;border:1px solid #b2ebf2;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px">
+          <i class="ti ti-building" style="color:#0e7490"></i>
+          <span id="imp-co-banner-text" style="flex:1;color:#006064"></span>
+          <button class="btn btn-sm" onclick="document.getElementById('imp-step-2').style.display='none';document.getElementById('imp-step-1').style.display=''" style="font-size:11px;height:24px;padding:0 8px">Change</button>
+        </div>
+        <div class="imp-chips" id="imp-chips"></div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:12px">
+          <input type="checkbox" id="imp-overwrite"> Overwrite existing assets with same Serial Number
+        </label>
+        <div class="imp-preview" id="imp-preview-wrap"></div>
+        <div class="modal-footer" style="padding:0;border:none;margin-top:12px">
+          <button class="btn" onclick="resetImport()">← Back</button>
+          <button class="btn" style="background:#0e7490;color:#fff;border-color:#0e7490" id="imp-commit-btn" onclick="commitImport()">
+            <i class="ti ti-check"></i> Import Assets
+          </button>
+        </div>
+      </div>
+
+      <div id="imp-step-3" style="display:none">
+        <div id="imp-result"></div>
+        <div class="modal-footer" style="padding:0;border:none;margin-top:14px">
+          <button class="btn" onclick="resetImport()">Import more</button>
+          <button class="btn btn-primary" onclick="closeModal();renderTab()">View assets</button>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+  const dz=document.getElementById('imp-drop');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleImportFile(e.dataTransfer.files[0]);});
+}
+
+function resetImport(){
+  IMP_PREVIEW_ROWS=[];
+  const s1=document.getElementById('imp-step-1');
+  const s2=document.getElementById('imp-step-2');
+  const s3=document.getElementById('imp-step-3');
+  const st=document.getElementById('imp-status');
+  const fi=document.getElementById('imp-file');
+  if(s1)s1.style.display='';
+  if(s2)s2.style.display='none';
+  if(s3)s3.style.display='none';
+  if(st)st.textContent='';
+  if(fi)fi.value='';
+  // Refresh company dropdown in case companies changed
+  const co=document.getElementById('imp-company');
+  if(co){
+    const cur=co.value;
+    co.innerHTML=`<option value="">— Use company from file (per row) —</option>${DATA.companies.map(c=>`<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('')}`;
+  }
+}
+
+function handleImportFile(file){
+  if(!file)return;
+  const st=document.getElementById('imp-status');
+  st.textContent=`📄 ${file.name} (${(file.size/1024).toFixed(1)} KB) — reading…`;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let rows=[];
+      if(ext==='csv'){
+        rows=parseImpCSV(e.target.result);
+      } else {
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      }
+      if(!rows.length){st.textContent='❌ File is empty or could not be read.';return;}
+      st.textContent='';
+      buildImportPreview(rows);
+    } catch(err){st.textContent='❌ Error reading file: '+err.message;}
+  };
+  if(ext==='csv') reader.readAsText(file);
+  else reader.readAsArrayBuffer(file);
+}
+
+function parseImpCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2) return [];
+  function splitLine(l){
+    const res=[];let cur='',inQ=false;
+    for(let i=0;i<l.length;i++){
+      const c=l[i];
+      if(c==='"'&&inQ&&l[i+1]==='"'){cur+='"';i++;}
+      else if(c==='"'){inQ=!inQ;}
+      else if(c===','&&!inQ){res.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    res.push(cur.trim());return res;
+  }
+  const headers=splitLine(lines[0]);
+  return lines.slice(1).map(l=>{
+    const vals=splitLine(l);
+    const obj={};
+    headers.forEach((h,i)=>{obj[h]=vals[i]||'';});
+    return obj;
+  });
+}
+
+function mapImpRow(raw){
+  const out={};
+  for(const [k,v] of Object.entries(raw)){
+    const key=(k||'').toString().toLowerCase().trim();
+    const field=IMP_COL_MAP[key];
+    if(field) out[field]=v===null||v===undefined?'':String(v).trim();
+  }
+  return out;
+}
+
+function buildImportPreview(rawRows){
+  const existingSerials=new Set(DATA.assets.map(a=>(a.serial||'').toLowerCase()).filter(Boolean));
+  const mapped=rawRows.map(mapImpRow);
+  const results=mapped.map(r=>{
+    if(!r.brand||!r.model) return{...r,_status:'err',_msg:'Missing Brand or Model'};
+    const serial=(r.serial||'').toLowerCase();
+    const isDup=serial&&existingSerials.has(serial);
+    return{...r,_status:isDup?'dup':'new',_msg:isDup?'Serial exists':'Ready'};
+  });
+  IMP_PREVIEW_ROWS=results;
+  const newC=results.filter(r=>r._status==='new').length;
+  const dupC=results.filter(r=>r._status==='dup').length;
+  const errC=results.filter(r=>r._status==='err').length;
+  document.getElementById('imp-chips').innerHTML=`
+    <div class="imp-chip"><div class="imp-chip-num">${rawRows.length}</div><div class="imp-chip-lbl">Total rows</div></div>
+    <div class="imp-chip c-new"><div class="imp-chip-num">${newC}</div><div class="imp-chip-lbl">New assets</div></div>
+    <div class="imp-chip c-skip"><div class="imp-chip-num">${dupC}</div><div class="imp-chip-lbl">Duplicates</div></div>
+    <div class="imp-chip c-err"><div class="imp-chip-num">${errC}</div><div class="imp-chip-lbl">Errors</div></div>`;
+  const cols=['brand','model','type','serial','ram','gpu','status','assignedTo','company'];
+  const lbls=['Brand','Model','Type','Serial','RAM','GPU','Status','Assigned To','Company'];
+  const tagH={new:'<span class="imp-tag imp-tag-new">NEW</span>',dup:'<span class="imp-tag imp-tag-dup">DUP</span>',err:'<span class="imp-tag imp-tag-err">ERR</span>'};
+  const rowC={new:'imp-row-new',dup:'imp-row-dup',err:'imp-row-err'};
+  document.getElementById('imp-preview-wrap').innerHTML=`<table>
+    <thead><tr><th>Status</th>${lbls.map(l=>`<th>${l}</th>`).join('')}<th>Note</th></tr></thead>
+    <tbody>${results.map(r=>`<tr class="${rowC[r._status]||''}">
+      <td>${tagH[r._status]||''}</td>
+      ${cols.map(c=>`<td>${r[c]||'—'}</td>`).join('')}
+      <td style="color:var(--text3);font-size:11px">${r._msg||''}</td>
+    </tr>`).join('')}</tbody></table>`;
+  // Show company banner in preview step
+  const selCo = document.getElementById('imp-company');
+  const chosenCo = selCo ? selCo.value : '';
+  const bannerText = document.getElementById('imp-co-banner-text');
+  if(bannerText){
+    if(chosenCo){
+      bannerText.innerHTML = `Importing all assets into: <strong>${chosenCo}</strong>`;
+    } else {
+      bannerText.innerHTML = `Using <strong>Company column from file</strong> per row (fallback: ${DATA.companies[0]||'first company'})`;
+    }
+  }
+  document.getElementById('imp-step-1').style.display='none';
+  document.getElementById('imp-step-2').style.display='';
+}
+
+async function commitImport(){
+  const overwrite=document.getElementById('imp-overwrite').checked;
+  const btn=document.getElementById('imp-commit-btn');
+  btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Importing…';
+  let inserted=0,updated=0,skipped=0,errors=[];
+
+  for(const r of IMP_PREVIEW_ROWS){
+    if(r._status==='err'){continue;}
+    if(r._status==='dup'&&!overwrite){skipped++;continue;}
+    try{
+      // Company priority: 1) user-selected override, 2) row's own company column, 3) first company
+      const selCoEl=document.getElementById('imp-company');
+      const forcedCo=selCoEl?selCoEl.value:'';
+      const rowCo=r.company&&DATA.companies.includes(r.company)?r.company:'';
+      const company=forcedCo||rowCo||(DATA.companies[0]||'');
+      const asset={
+        type:r.type||'CPU', brand:r.brand||'Other', model:r.model||'Unknown',
+        deviceSpecs:r.deviceSpecs||'', gpu:r.gpu||'', ram:r.ram||'',
+        ssd:r.ssd||'', hdd:r.hdd||'', serial:r.serial||'',
+        assetTag:r.assetTag||'', assetTag2:r.assetTag2||'',
+        systemTag:r.systemTag||'', prevTag:r.prevTag||'',
+        company, location:r.location||'Main Office', floor:r.floor||'Ground Floor',
+        status:r.status||'Free / Spare',
+        assignedTo:r.assignedTo||'', lastAssigned:r.lastAssigned||'',
+        vendorName:r.vendorName||'', vendorContact:r.vendorContact||'',
+        purchasePrice:r.purchasePrice||'', marketValue:r.marketValue||'',
+        purchaseDate:r.purchaseDate||'', warranty:'', notes:r.notes||''
+      };
+      if(r._status==='dup'&&overwrite){
+        const serial=(r.serial||'').toLowerCase();
+        const idx=DATA.assets.findIndex(a=>(a.serial||'').toLowerCase()===serial);
+        if(idx>=0){DATA.assets[idx]={...asset,id:DATA.assets[idx].id};updated++;}
+        else{DATA.assets.push({...asset,id:DATA.nextId++});inserted++;}
+      } else {
+        DATA.assets.push({...asset,id:DATA.nextId++}); inserted++;
+      }
+    } catch(e){errors.push((r.model||'row')+': '+e.message);}
+  }
+
+  const errRows=IMP_PREVIEW_ROWS.filter(r=>r._status==='err').length;
+  await saveData();
+  renderSidebar(); updateTicker();
+
+  const ok=!errors.length;
+  document.getElementById('imp-result').innerHTML=`
+    <div style="background:${ok?'var(--success-light)':'var(--warning-light)'};border-radius:12px;padding:24px;text-align:center">
+      <div style="font-size:32px;margin-bottom:10px">${ok?'✅':'⚠️'}</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:8px">${ok?'Import complete!':'Import done with issues'}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:2">
+        <strong style="color:var(--success)">${inserted}</strong> new assets added &nbsp;·&nbsp;
+        <strong style="color:#0e7490">${updated}</strong> updated &nbsp;·&nbsp;
+        <strong style="color:var(--warning)">${skipped}</strong> duplicates skipped &nbsp;·&nbsp;
+        <strong style="color:var(--danger)">${errRows}</strong> invalid rows
+      </div>
+      ${errors.length?`<div style="margin-top:12px;font-size:12px;color:var(--danger);text-align:left;background:#fff;border-radius:8px;padding:10px">${errors.join('<br>')}</div>`:''}
+    </div>`;
+  document.getElementById('imp-step-2').style.display='none';
+  document.getElementById('imp-step-3').style.display='';
+  btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-check"></i> Import Assets';
+  notify(`${inserted} assets added, ${updated} updated`);
+}
+
+function downloadImportTemplate(){
+  const headers=['Brand','Model','Type','Device Specs','GPU','RAM','SSD','Secondary HDD',
+    'Serial No','LCD Tag 1','LCD Tag 2','System Tag','Previous Tag','Company',
+    'Location','Floor','Status','Assigned To','Last Assigned To',
+    'Vendor','Vendor Contact','Purchase Price (PKR)','Current Market Value (PKR)',
+    'Purchase Date','Notes'];
+  const example=['Dell','OptiPlex 7090','CPU','Core i7 10th Gen, 512GB SSD, Win 11 Pro',
+    'Intel UHD 630','16GB DDR4','512GB NVMe','1TB HDD',
+    'SN-ABC123','LCD-001','LCD-002','SYS-001','','MyCompany',
+    'Main Office','Ground Floor','Free / Spare','','',
+    'Al-Fatah Electronics','0300-1234567','85000','60000',
+    '2024-01-15','Good condition'];
+  const ws=XLSX.utils.aoa_to_sheet([headers,example]);
+  ws['!cols']=headers.map(()=>({wch:22}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Asset Import Template');
+  XLSX.writeFile(wb,'IT_Asset_Import_Template.xlsx');
+  notify('Template downloaded');
+}
+
+// ── CLOSE MODAL ──
+function closeModal(){
+  const mr = document.getElementById("modal-root");
+  if (mr) mr.innerHTML = "";
+}
+</script>
+</body>
+</html>
