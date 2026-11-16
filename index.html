@@ -336,14 +336,15 @@ tr.clickable-row:hover td{background:#f0f7ff;cursor:pointer}
       <div class="sidebar-section">Navigation</div>
       <div class="sidebar-item" id="nav-assets" onclick="UI.company='__ALL__';UI.fCompany='';setTab('assets')"><i class="ti ti-table"></i> IT Asset Register</div>
       <div class="sidebar-item" id="nav-summary" onclick="setTab('summary')"><i class="ti ti-layout-dashboard"></i> Summary</div>
+      <div class="sidebar-item" id="nav-office" style="display:none" onclick="setTab('office')"><i class="ti ti-armchair"></i> Non IT Asset Register</div>
       <div class="sidebar-section">Admin</div>
       <div class="sidebar-item" id="nav-employees" onclick="setTab('employees')"><i class="ti ti-id-badge"></i> Employee Data</div>
       <div id="admin-only-nav" style="display:none">
         <div class="sidebar-item" id="nav-users" onclick="setTab('users')"><i class="ti ti-users"></i> User Management</div>
-        <div class="sidebar-item" id="nav-office" onclick="setTab('office')"><i class="ti ti-armchair"></i> Non IT Asset Register</div>
+        <div class="sidebar-item" id="nav-history" onclick="setTab('history')"><i class="ti ti-history"></i> Activity History</div>
         <div class="sidebar-item" id="nav-settings" onclick="setTab('settings')"><i class="ti ti-settings"></i> Settings</div>
       </div>
-      <div class="sidebar-section" style="margin-top:4px">Companies</div>
+      <div class="sidebar-section" id="co-section" style="margin-top:4px">Companies</div>
       <div id="co-sidebar"></div>
       <div id="add-co-btn" class="sidebar-item" style="display:none" onclick="addCompany()"><i class="ti ti-plus"></i> Add Company</div>
     </div>
@@ -447,21 +448,39 @@ async function doLogout(){try{await fetch('/api/logout',{method:'POST'});}catch(
 document.getElementById('lf-p').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 document.getElementById('lf-u').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('lf-p').focus();});
 
+// Roles: superadmin = system owner (users, settings, history, companies, employees)
+//        admin = manages the registers they have access to · junior = view + add
+const isSuperAdmin=()=>!!(ME&&ME.role==='superadmin');
+const canManage=()=>!!(ME&&(ME.role==='admin'||ME.role==='superadmin'));
+// Companies are shared by both registers; only Super Admin and IT-register Admins may add one
+const canAddCompany=()=>!!(ME&&(ME.role==='superadmin'||(ME.role==='admin'&&ME.it)));
+const roleLabel=r=>r==='superadmin'?'Super Admin':r==='admin'?'Admin':'Junior';
+
+// ── REGISTER ACCESS (set per user by an admin; the server enforces it too) ──
+function tabAllowed(t){
+  if(!ME)return false;
+  if(t==='assets'||t==='summary')return !!ME.it;
+  if(t==='office')return !!ME.nonit;
+  if(t==='users'||t==='settings'||t==='history')return ME.role==='superadmin';
+  return true;
+}
+function defaultTab(){return ME.it?'assets':ME.nonit?'office':ME.role==='superadmin'?'users':'employees';}
+
 // ── BOOT ──
 async function bootApp(){
   document.getElementById('login-page').style.display='none';
   document.getElementById('main-app').style.display='flex';
-  const isAdmin=ME.role==='admin';
+  const isAdmin=ME.role==='superadmin';
   document.getElementById('sb-uname').textContent=ME.name;
   document.getElementById('sb-av').textContent=ME.name.charAt(0).toUpperCase();
-  const rb=document.getElementById('sb-rbadge');rb.textContent=isAdmin?'Admin':'Junior';rb.className='rbadge '+(isAdmin?'rbadge-admin':'rbadge-junior');
+  const rb=document.getElementById('sb-rbadge');rb.textContent=roleLabel(ME.role);rb.className='rbadge '+(canManage()?'rbadge-admin':'rbadge-junior');
   if(isAdmin){
     document.getElementById('admin-only-nav').style.display='block';
-    document.getElementById('add-co-btn').style.display='flex';
     document.getElementById('settings-btn').style.display='flex';
   }
+  if(canAddCompany())document.getElementById('add-co-btn').style.display='flex';
   await Promise.all([loadData(),loadSettings()]);
-  setTab('assets');
+  setTab(defaultTab());
 }
 
 async function loadData(){
@@ -506,9 +525,12 @@ async function saveData(){await api('POST','/api/data',DATA);}
 
 // ── SIDEBAR ──
 function renderSidebar(){
-  const isAdmin=ME&&ME.role==='admin';
+  const isAdmin=canAddCompany();
   const cl=document.getElementById('co-sidebar');if(!cl)return;
-  cl.innerHTML=DATA.companies.map(c=>{
+  const showNav=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
+  showNav('nav-assets',ME&&ME.it);showNav('nav-summary',ME&&ME.it);showNav('nav-office',ME&&ME.nonit);
+  showNav('co-section',ME&&(ME.it||isAdmin));
+  cl.innerHTML=!(ME&&ME.it)?'':DATA.companies.map(c=>{
     const active=UI.company===c&&UI.tab==='assets';
     const logo=SETTINGS.companyLogos&&SETTINGS.companyLogos[c];
     const cnt=DATA.assets.filter(a=>a.company===c).length;
@@ -520,21 +542,21 @@ function renderSidebar(){
   // Active state for Asset Register (all companies)
   const navAssets=document.getElementById('nav-assets');
   if(navAssets)navAssets.classList.toggle('active',UI.tab==='assets'&&UI.company==='__ALL__');
-  ['assets','summary','users','settings','employees','office'].forEach(t=>{
+  ['assets','summary','users','settings','employees','office','history'].forEach(t=>{
     const el=document.getElementById('nav-'+t);if(el)el.classList.toggle('active',UI.tab===t);
   });
 }
 
-function switchCo(c){UI.company=c;UI.fCompany='';UI.tab='assets';renderSidebar();renderTab();}
-function setTab(t){UI.tab=t;if(t!=='summary')summaryView='overview';renderSidebar();renderTab();}
+function switchCo(c){if(!ME||!ME.it)return;UI.company=c;UI.fCompany='';UI.tab='assets';renderSidebar();renderTab();}
+function setTab(t){if(!tabAllowed(t))t=defaultTab();UI.tab=t;if(t!=='summary')summaryView='overview';renderSidebar();renderTab();}
 
 // ── RENDER TAB ──
 function renderTab(){
   const title=document.getElementById('tb-title');
   const actions=document.getElementById('tb-actions');
   const content=document.getElementById('main-content');
-  const isAdmin=ME&&ME.role==='admin';
-  if(UI.tab==='assets'){
+  const isAdmin=isSuperAdmin();
+  if(UI.tab==='assets'&&ME.it){
     // If specific company selected from sidebar show that, else show ALL
     const showingAll=UI.company==='__ALL__'||!UI.company;
     title.innerHTML=showingAll
@@ -542,25 +564,32 @@ function renderTab(){
       :`<span class="co-pill"><i class="ti ti-building" style="font-size:13px"></i>${UI.company}</span>&nbsp; IT Asset Register`;
     actions.innerHTML=`
       <button class="btn btn-success" onclick="openExportModal()"><i class="ti ti-download"></i>Export</button>
+      <button class="btn" onclick="downloadImportTemplate()" title="Download a blank Excel template for importing assets"><i class="ti ti-file-download"></i>Template</button>
       <button class="btn" style="background:#0e7490;color:#fff;border-color:#0e7490" onclick="openImportExcel()"><i class="ti ti-table-import"></i>Import Excel</button>
       <button class="btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed" onclick="openAddTestingDevice()"><i class="ti ti-device-mobile"></i>Add Testing Device</button>
       <button class="btn btn-primary" onclick="openAddAsset()"><i class="ti ti-plus"></i>Add Asset</button>`;
     content.innerHTML=renderAssetsTab();setTimeout(initTableRender,10);
-  } else if(UI.tab==='summary'){
+  } else if(UI.tab==='summary'&&ME.it){
     title.textContent='Summary';actions.innerHTML='';content.innerHTML=renderSummaryTab();
     setTimeout(drawSummaryCharts,50);
   } else if(UI.tab==='employees'){
     title.textContent='Employee Data';
-    actions.innerHTML=`<button class="btn btn-primary" onclick="openAddEmployee()"><i class="ti ti-plus"></i>Add Employee</button>
-    ${isAdmin?`<input type="file" id="emp-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmployeesExcel(this)">
+    actions.innerHTML=`${isAdmin?`<button class="btn btn-primary" onclick="openAddEmployee()"><i class="ti ti-plus"></i>Add Employee</button>
+    `:''}${isAdmin?`<input type="file" id="emp-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmployeesExcel(this)">
     <button class="btn" onclick="downloadEmployeeTemplate()"><i class="ti ti-download"></i>Template</button>
     <button class="btn btn-success" onclick="document.getElementById('emp-excel-input').click()"><i class="ti ti-file-spreadsheet"></i>Import Excel</button>`:''}`;
     content.innerHTML='<div id="emp-body"></div>';loadEmployeesTab();
-  } else if(UI.tab==='office'&&isAdmin){
+  } else if(UI.tab==='office'&&ME.nonit){
     title.innerHTML='<i class="ti ti-armchair" style="font-size:15px;color:var(--text2)"></i>&nbsp; Non IT Asset Register';
     actions.innerHTML=`<button class="btn btn-success" onclick="exportOfficeExcel()"><i class="ti ti-download"></i>Export</button>
+      <button class="btn" style="background:#0e7490;color:#fff;border-color:#0e7490" onclick="openOfficeImport()"><i class="ti ti-table-import"></i>Import Excel</button>
       <button class="btn btn-primary" onclick="openOfficeModal()"><i class="ti ti-plus"></i>Add Item</button>`;
     content.innerHTML='<div id="office-body"></div>';loadOfficeTab();
+  } else if(UI.tab==='history'&&isAdmin){
+    title.innerHTML='<i class="ti ti-history" style="font-size:15px;color:var(--text2)"></i>&nbsp; Activity History';
+    actions.innerHTML=`<button class="btn" onclick="loadHistoryTab()"><i class="ti ti-refresh"></i>Refresh</button>
+      <button class="btn btn-success" onclick="exportHistoryExcel()"><i class="ti ti-download"></i>Export</button>`;
+    content.innerHTML='<div id="hist-body"></div>';HIST.offset=0;loadHistoryTab();
   } else if(UI.tab==='users'&&isAdmin){
     title.textContent='User Management';
     actions.innerHTML=`<button class="btn btn-primary" onclick="openAddUser()"><i class="ti ti-plus"></i>Add User</button>`;
@@ -627,7 +656,7 @@ function fmtCurrency(v){if(!v)return'—';return'PKR '+Number(v).toLocaleString(
 
 function renderAssetsTab(){
   const showAll=UI.company==='__ALL__'||!UI.company;
-  const stats=coStats(showAll?'__ALL__':UI.company);const assets=filtered();const isAdmin=ME&&ME.role==='admin';
+  const stats=coStats(showAll?'__ALL__':UI.company);const assets=filtered();const isAdmin=canManage();
   return`
   <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
     <div class="stat-card" style="cursor:pointer" onclick="clearF()" title="Show all assets">
@@ -761,7 +790,7 @@ function renderTableOnly(){
   const wrap=document.getElementById('table-wrap-inner');
   if(!wrap){reTable();return;}
   const assets=filtered();
-  const isAdmin=ME&&ME.role==='admin';
+  const isAdmin=canManage();
   const showAll=UI.company==='__ALL__'||!UI.company;
   if(assets.length===0){
     wrap.innerHTML=`<div class="empty-state"><i class="ti ti-inbox"></i><h3>No assets found</h3><p>Try a different search term.</p></div>`;
@@ -809,7 +838,7 @@ function renderTableOnly(){
 // ── ASSET DETAIL VIEW ──
 function openDetail(id){
   const a=DATA.assets.find(x=>x.id===id);if(!a)return;
-  const isAdmin=ME&&ME.role==='admin';
+  const isAdmin=canManage();
   const row=(label,value,full=false)=>`<div class="detail-item${full?' detail-full':''}"><div class="detail-label">${label}</div><div class="detail-value ${!value||value==='—'?'empty':''}">${value||'—'}</div></div>`;
   document.getElementById('modal-root').innerHTML=`
   <div class="modal-overlay" id="mo">
@@ -1038,6 +1067,7 @@ async function delAsset(id){
 
 // ── COMPANY ──
 async function addCompany(){
+  if(!canAddCompany()){notify('Only IT Asset Register admins can add companies','err');return;}
   const name=prompt('Enter new company name:');if(!name||!name.trim())return;
   const n=name.trim();
   if(DATA.companies.includes(n)){notify('Company already exists','err');return;}
@@ -1316,7 +1346,7 @@ function renderSummaryTab(){
   const allF=DATA.assets.filter(a=>a.status==='Free / Spare').length;
   const allR=DATA.assets.filter(a=>a.status==='Under Repair').length;
   const allRet=DATA.assets.filter(a=>a.status==='Retired').length;
-  const isAdmin=ME&&ME.role==='admin';
+  const isAdmin=canManage();
   const allStats=coStats('__ALL__');
 
   // Type breakdown across all companies
@@ -1620,12 +1650,12 @@ async function loadEmployeesTab(){
       <div class="srch-wrap" style="margin-left:auto"><i class="ti ti-search"></i><input type="text" id="emp-search" class="srch-input" placeholder="Search name, dept, ID…" style="min-width:200px" oninput="filterEmployees(this.value)"></div>
     </div>
     <div class="table-wrap">
-    ${employees.length===0?`<div class="empty-state"><i class="ti ti-users"></i><h3>No employees yet</h3><p>Click "Add Employee" to get started.</p></div>`:`
+    ${employees.length===0?`<div class="empty-state"><i class="ti ti-users"></i><h3>No employees yet</h3><p>${isSuperAdmin()?'Click "Add Employee" to get started.':'A Super Admin manages employee records.'}</p></div>`:`
     <table id="emp-table">
       <thead><tr>
         <th>#</th><th>Employee ID</th><th>Full Name</th><th>Department</th>
         <th>Email</th><th>Slack ID</th><th>Phone</th><th>Designation</th>
-        <th>Company</th><th>Status</th><th style="text-align:center">Actions</th>
+        <th>Company</th><th>Status</th>${isSuperAdmin()?'<th style="text-align:center">Actions</th>':''}
       </tr></thead>
       <tbody id="emp-tbody">
       ${employees.map((e,i)=>`<tr data-search="${[e.name,e.department,e.empId,e.email,e.slack,e.designation,e.company].join(' ').toLowerCase()}">
@@ -1642,10 +1672,10 @@ async function loadEmployeesTab(){
         <td style="color:var(--text2)">${e.designation||'—'}</td>
         <td><span style="font-size:11px;background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:5px;font-weight:600">${e.company||'—'}</span></td>
         <td>${e.status==='Inactive'?`<span class="badge badge-retired">Inactive</span>`:`<span class="badge badge-allotted">Active</span>`}</td>
-        <td><div class="actions-cell" style="justify-content:center">
+        ${isSuperAdmin()?`<td><div class="actions-cell" style="justify-content:center">
           <button class="btn btn-sm btn-icon" title="Edit" onclick="openEditEmployee(${e.id})"><i class="ti ti-edit"></i></button>
-          <button class="btn btn-sm btn-icon" title="Delete" style="color:var(--danger)" onclick="deleteEmployee(${e.id},'${e.name}')"><i class="ti ti-trash"></i></button>
-        </div></td>
+          <button class="btn btn-sm btn-icon" title="Delete" style="color:var(--danger)" onclick="deleteEmployee(${e.id},'${String(e.name||'').replace(/'/g,'&#39;')}')"><i class="ti ti-trash"></i></button>
+        </div></td>`:''}
       </tr>`).join('')}
       </tbody>
     </table>`}
@@ -1814,6 +1844,7 @@ async function importEmployeesExcel(input){
 
 async function loadUsersTab(){
   const users=await api('GET','/api/users');if(!users)return;
+  USERS=users;
   document.getElementById('users-body').innerHTML=`
   <div class="card">
     <div class="card-header"><i class="ti ti-users" style="font-size:16px;color:var(--text2)"></i><span class="card-title">System Users</span><span style="font-size:12px;color:var(--text2)">${users.length} users</span></div>
@@ -1821,18 +1852,24 @@ async function loadUsersTab(){
       ${users.map(u=>`<div class="user-row">
         <div class="user-av-sm">${u.name.charAt(0).toUpperCase()}</div>
         <div class="user-rinfo">
-          <div class="user-rname">${u.name}</div>
-          <div class="user-run"><i class="ti ti-at" style="font-size:12px"></i> ${u.username}
+          <div class="user-rname">${oaEsc(u.name)}</div>
+          <div class="user-run"><i class="ti ti-at" style="font-size:12px"></i> ${oaEsc(u.username)}
             ${u.company?`&nbsp;<span style="font-size:11px;background:#fef3c7;color:#b45309;padding:1px 7px;border-radius:5px;font-weight:700"><i class="ti ti-building" style="font-size:11px"></i> ${u.company} only</span>`:'<span style="font-size:11px;color:var(--text3)">All companies</span>'}
+            &nbsp;${accessChips(u)}
           </div>
         </div>
-        <span class="rbadge ${u.role==='admin'?'rbadge-admin':'rbadge-junior'}">${u.role==='admin'?'Admin':'Junior'}</span>
-        <button class="btn btn-sm btn-icon" onclick="openEditUser(${u.id},'${u.name}','${u.username}','${u.role}','${u.company||''}')"><i class="ti ti-edit"></i></button>
-        ${u.id!==ME.id?`<button class="btn btn-sm btn-icon" style="color:var(--danger)" onclick="delUser(${u.id},'${u.name}')"><i class="ti ti-trash"></i></button>`:'<div style="width:34px"></div>'}
+        <span class="rbadge ${u.role!=='junior'?'rbadge-admin':'rbadge-junior'}">${roleLabel(u.role)}</span>
+        <button class="btn btn-sm btn-icon" onclick="openEditUser(${u.id})"><i class="ti ti-edit"></i></button>
+        ${u.id!==ME.id?`<button class="btn btn-sm btn-icon" style="color:var(--danger)" onclick="delUser(${u.id})"><i class="ti ti-trash"></i></button>`:'<div style="width:34px"></div>'}
       </div>`).join('')}
     </div>
   </div>`;
 }
+let USERS=[];
+const accessChips=u=>(u.it?'<span style="font-size:11px;background:#e0f2fe;color:#0369a1;padding:1px 7px;border-radius:5px;font-weight:700">IT</span>':'')+(u.nonit?' <span style="font-size:11px;background:#fef3c7;color:#b45309;padding:1px 7px;border-radius:5px;font-weight:700">Non IT</span>':'')+((!u.it&&!u.nonit)?'<span style="font-size:11px;color:var(--text3)">No register access</span>':'');
+const accessField=(it,nonit)=>`<div class="fg"><label>Register Access <span style="font-weight:400;color:var(--text3)">(who may open each register)</span></label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer"><input type="checkbox" id="u_it" ${it?'checked':''}> IT Asset Register</label>
+          <label style="display:flex;align-items:center;gap:8px;font-weight:500;cursor:pointer"><input type="checkbox" id="u_nonit" ${nonit?'checked':''}> Non IT Asset Register</label></div>`;
 function openAddUser(){
   document.getElementById('modal-root').innerHTML=`
   <div class="modal-overlay" id="mo"><div class="modal modal-sm">
@@ -1844,8 +1881,10 @@ function openAddUser(){
         <div class="fg"><label>Password *</label><input type="password" id="u_pw" placeholder="Set a strong password"></div>
         <div class="fg"><label>Role *</label><select id="u_role" onchange="toggleCompanyField()">
           <option value="junior">Junior — View + Add (no delete)</option>
-          <option value="admin">Admin — Full Access</option>
+          <option value="admin">Admin — Manages their register(s) only</option>
+          <option value="superadmin">Super Admin — Full system control</option>
         </select></div>
+        ${accessField(true,false)}
         <div class="fg" id="company-field">
           <label>Restrict to Company <span style="font-weight:400;color:var(--text3)">(leave blank for all companies)</span></label>
           <select id="u_company">
@@ -1862,10 +1901,12 @@ function openAddUser(){
 function toggleCompanyField(){
   const role=document.getElementById('u_role');
   const cf=document.getElementById('company-field');
-  if(cf)cf.style.display=role&&role.value==='admin'?'none':'flex';
+  if(cf)cf.style.display=role&&role.value!=='junior'?'none':'flex';
 }
 
-function openEditUser(id,name,un,role,company){
+function openEditUser(id){
+  const u=USERS.find(x=>x.id===id);if(!u)return;
+  const name=oaEsc(u.name),un=oaEsc(u.username),role=u.role,company=u.company||'';
   document.getElementById('modal-root').innerHTML=`
   <div class="modal-overlay" id="mo"><div class="modal modal-sm">
     <div class="modal-header"><div class="modal-hicon"><i class="ti ti-user-edit"></i></div><div class="modal-title">Edit — ${name}</div><button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button></div>
@@ -1876,9 +1917,11 @@ function openEditUser(id,name,un,role,company){
         <div class="fg"><label>New Password <span style="font-weight:400;color:var(--text3)">(blank = keep current)</span></label><input type="password" id="u_pw" placeholder="Leave blank to keep unchanged"></div>
         <div class="fg"><label>Role</label><select id="u_role" onchange="toggleCompanyField()">
           <option value="junior" ${role==='junior'?'selected':''}>Junior — View + Add (no delete)</option>
-          <option value="admin" ${role==='admin'?'selected':''}>Admin — Full Access</option>
+          <option value="admin" ${role==='admin'?'selected':''}>Admin — Manages their register(s) only</option>
+          <option value="superadmin" ${role==='superadmin'?'selected':''}>Super Admin — Full system control</option>
         </select></div>
-        <div class="fg" id="company-field" style="${role==='admin'?'display:none':''}">
+        ${accessField(u.it,u.nonit)}
+        <div class="fg" id="company-field" style="${role!=='junior'?'display:none':''}">
           <label>Restrict to Company <span style="font-weight:400;color:var(--text3)">(blank = all companies)</span></label>
           <select id="u_company">
             <option value="" ${!company?'selected':''}>All Companies</option>
@@ -1896,21 +1939,22 @@ async function saveNewUser(){
   const companyEl=document.getElementById('u_company');
   const company=companyEl?companyEl.value:'';
   if(!name||!un||!pw){notify('All fields required','err');return;}
-  const r=await api('POST','/api/users',{name,username:un,password:pw,role,company});
+  const r=await api('POST','/api/users',{name,username:un,password:pw,role,company,it:document.getElementById('u_it').checked,nonit:document.getElementById('u_nonit').checked});
   if(r&&r.success){notify('User created');closeModal();loadUsersTab();}else if(r){notify(r.error||'Failed','err');}
 }
 async function saveEditUser(id){
   const name=document.getElementById('u_name').value.trim(),un=document.getElementById('u_un').value.trim(),pw=document.getElementById('u_pw').value,role=document.getElementById('u_role').value;
   const companyEl=document.getElementById('u_company');
   const company=companyEl?companyEl.value:'';
-  const body={name,username:un,role,company};if(pw)body.password=pw;
+  const body={name,username:un,role,company,it:document.getElementById('u_it').checked,nonit:document.getElementById('u_nonit').checked};if(pw)body.password=pw;
   const r=await api('PUT',`/api/users/${id}`,body);
   if(r&&r.success){notify('User updated');closeModal();loadUsersTab();}else if(r){notify(r.error||'Failed','err');}
 }
-async function delUser(id,name){
+async function delUser(id){
+  const du=USERS.find(x=>x.id===id);const name=du?du.name:'this user';
   if(!confirm(`Delete user "${name}"?`))return;
   const r=await api('DELETE',`/api/users/${id}`);
-  if(r&&r.success){notify(`User "${name}" deleted`);loadUsersTab();}
+  if(r&&r.success){notify(`User "${name}" deleted`);loadUsersTab();}else if(r){notify(r.error||'Failed','err');}
 }
 
 // ── SETTINGS ──
@@ -2565,8 +2609,9 @@ function exportPDF(){
 
 // ── MISC ──
 function updateTicker(){
+  const bar=document.querySelector('.ticker-bar');if(bar)bar.style.display=(ME&&ME.it)?'':'none';
   const el=document.getElementById('ticker-inner');
-  if(!el)return;
+  if(!el||!(ME&&ME.it))return;
   const all=DATA.assets;
   const co=DATA.companies;
   const total=all.length;
@@ -2748,7 +2793,7 @@ function renderOfficeRows(){
     <td style="text-align:right;color:var(--text2)">${i.unit_cost!=null?oaMoney(i.unit_cost):'—'}</td>
     <td><div class="actions-cell" style="justify-content:center">
       <button class="btn btn-sm btn-icon" title="Edit" onclick="openOfficeModal(${i.id})"><i class="ti ti-edit"></i></button>
-      <button class="btn btn-sm btn-icon" title="Delete" style="color:var(--danger)" onclick="deleteOfficeItem(${i.id})"><i class="ti ti-trash"></i></button>
+      ${canManage()?`<button class="btn btn-sm btn-icon" title="Delete" style="color:var(--danger)" onclick="deleteOfficeItem(${i.id})"><i class="ti ti-trash"></i></button>`:''}
     </div></td></tr>`).join('')}</tbody></table>`;
 }
 
@@ -2824,6 +2869,321 @@ function exportOfficeExcel(){
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Non IT Assets');
   XLSX.writeFile(wb,`non-it-asset-register-${new Date().toISOString().slice(0,10)}.xlsx`);
   notify(`Exported ${rows.length} item(s)`);
+}
+
+// ── ACTIVITY HISTORY (audit trail, admin only) ───────────────
+let HIST={q:'',module:'',action:'',user:'',from:'',to:'',offset:0,limit:50,total:0,users:[],rows:[]};
+const HIST_MOD={IT:'IT Asset Register',NON_IT:'Non IT Asset Register'};
+const HIST_ACT={add:['Added','background:var(--success-light);color:var(--success)'],edit:['Edited','background:var(--warning-light);color:var(--warning)'],delete:['Deleted','background:var(--danger-light);color:var(--danger)']};
+let _histT;
+
+function histQuery(extra){
+  const p=new URLSearchParams();
+  if(HIST.q)p.set('q',HIST.q);if(HIST.module)p.set('module',HIST.module);if(HIST.action)p.set('action',HIST.action);if(HIST.user)p.set('user',HIST.user);
+  if(HIST.from)p.set('from',new Date(HIST.from+'T00:00:00').toISOString());
+  if(HIST.to)p.set('to',new Date(HIST.to+'T23:59:59').toISOString());
+  for(const k in (extra||{}))p.set(k,extra[k]);
+  return p.toString();
+}
+
+async function loadHistoryTab(keepFilters){
+  const body=document.getElementById('hist-body');if(!body)return;
+  const d=await api('GET','/api/audit?'+histQuery({limit:HIST.limit,offset:HIST.offset}));
+  if(!d||!Array.isArray(d.rows)){body.innerHTML=`<div class="card"><div class="empty-state"><i class="ti ti-lock"></i><h3>Could not load history</h3><p>${oaEsc(d&&d.error||'Admin access is required.')}</p></div></div>`;return;}
+  HIST.rows=d.rows;HIST.total=d.total;HIST.users=d.users;
+  if(!document.getElementById('hist-q')){
+    body.innerHTML=`<div class="card">
+      <div class="card-header"><i class="ti ti-history" style="font-size:16px;color:var(--primary)"></i><span class="card-title">Activity History <span style="font-weight:400;color:var(--text2);font-size:12px">— who added, changed or deleted assets</span></span><span id="hist-count" style="font-size:12px;color:var(--text2)"></span></div>
+      <div class="filters">
+        <div class="srch-wrap"><i class="ti ti-search"></i><input type="text" class="srch-input" id="hist-q" placeholder="Search tag, item, user, change…" value="${oaEsc(HIST.q)}" oninput="HIST.q=this.value;clearTimeout(_histT);_histT=setTimeout(()=>{HIST.offset=0;loadHistoryTab()},300)"></div>
+        <select id="hist-mod" onchange="HIST.module=this.value;HIST.offset=0;loadHistoryTab()"><option value="">${ME.it&&ME.nonit?'Both Registers':'All Activity'}</option>${ME.it?`<option value="IT" ${HIST.module==='IT'?'selected':''}>IT Asset Register</option>`:''}${ME.nonit?`<option value="NON_IT" ${HIST.module==='NON_IT'?'selected':''}>Non IT Asset Register</option>`:''}</select>
+        <select id="hist-act" onchange="HIST.action=this.value;HIST.offset=0;loadHistoryTab()"><option value="">All Actions</option><option value="add" ${HIST.action==='add'?'selected':''}>Added</option><option value="edit" ${HIST.action==='edit'?'selected':''}>Edited</option><option value="delete" ${HIST.action==='delete'?'selected':''}>Deleted</option></select>
+        <select id="hist-user" onchange="HIST.user=this.value;HIST.offset=0;loadHistoryTab()"></select>
+        <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px">From <input type="date" id="hist-from" value="${oaEsc(HIST.from)}" onchange="HIST.from=this.value;HIST.offset=0;loadHistoryTab()"></label>
+        <label style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:5px">To <input type="date" id="hist-to" value="${oaEsc(HIST.to)}" onchange="HIST.to=this.value;HIST.offset=0;loadHistoryTab()"></label>
+        <button class="btn btn-sm" onclick="HIST={...HIST,q:'',module:'',action:'',user:'',from:'',to:'',offset:0};document.getElementById('hist-body').innerHTML='';loadHistoryTab()"><i class="ti ti-filter-off"></i>Clear</button>
+      </div>
+      <div class="table-wrap" id="hist-table"></div>
+      <div id="hist-pager" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)"></div>
+    </div>`;
+  }
+  const us=document.getElementById('hist-user');
+  us.innerHTML='<option value="">All Users</option>'+HIST.users.map(u=>`<option ${HIST.user===u?'selected':''}>${oaEsc(u)}</option>`).join('');
+  renderHistoryRows();
+}
+
+function histWhen(iso){
+  const d=new Date(iso);if(isNaN(d))return oaEsc(iso);
+  return `<div style="font-weight:600">${d.toLocaleDateString('en-PK',{day:'2-digit',month:'short',year:'numeric'})}</div><div style="font-size:11px;color:var(--text3)">${d.toLocaleTimeString('en-PK',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>`;
+}
+function histDetails(r){
+  if(!r.changes.length)return '<span style="color:var(--text3)">—</span>';
+  return r.changes.map(c=>{
+    if(r.action==='edit')return `<div style="font-size:12px"><b>${oaEsc(c.f)}:</b> <span style="color:var(--text3);text-decoration:line-through">${oaEsc(c.from)||'(empty)'}</span> → <span style="color:var(--text)">${oaEsc(c.to)||'(empty)'}</span></div>`;
+    return `<div style="font-size:12px;color:var(--text2)"><b>${oaEsc(c.f)}:</b> ${oaEsc(c.to||c.from)}</div>`;
+  }).join('');
+}
+
+function renderHistoryRows(){
+  const tw=document.getElementById('hist-table'),pg=document.getElementById('hist-pager'),ct=document.getElementById('hist-count');if(!tw)return;
+  const from=HIST.total?HIST.offset+1:0,to=Math.min(HIST.offset+HIST.limit,HIST.total);
+  if(ct)ct.textContent=`${HIST.total} record${HIST.total===1?'':'s'}`;
+  if(!HIST.rows.length){tw.innerHTML=`<div class="empty-state"><i class="ti ti-history"></i><h3>No activity found</h3><p>Changes to assets will be recorded here automatically.</p></div>`;}
+  else tw.innerHTML=`<table><thead><tr><th>When</th><th>User</th><th>Register</th><th>Action</th><th>Item</th><th>Details</th></tr></thead><tbody>${HIST.rows.map(r=>`<tr>
+    <td style="white-space:nowrap">${histWhen(r.ts)}</td>
+    <td><span style="font-weight:600">${oaEsc(r.username||'—')}</span></td>
+    <td><span style="font-size:11px;background:${r.module==='IT'?'var(--primary-light);color:var(--primary)':'#fef3c7;color:#b45309'};padding:2px 8px;border-radius:5px;font-weight:600;white-space:nowrap">${HIST_MOD[r.module]||oaEsc(r.module)}</span></td>
+    <td><span class="badge" style="${HIST_ACT[r.action]?HIST_ACT[r.action][1]:''}">${HIST_ACT[r.action]?HIST_ACT[r.action][0]:oaEsc(r.action)}</span></td>
+    <td><span class="tag-sm">${oaEsc(r.item_tag||'—')}</span><div style="font-size:12px;margin-top:3px">${oaEsc(r.item_name||'')}</div><div style="font-size:11px;color:var(--text3)">${oaEsc(r.company||'')}</div></td>
+    <td style="max-width:420px">${histDetails(r)}</td></tr>`).join('')}</tbody></table>`;
+  if(pg)pg.innerHTML=`<span>Showing ${from}–${to} of ${HIST.total}</span><span style="display:flex;gap:6px">
+    <button class="btn btn-sm" ${HIST.offset<=0?'disabled':''} onclick="HIST.offset=Math.max(0,HIST.offset-HIST.limit);loadHistoryTab()"><i class="ti ti-chevron-left"></i>Prev</button>
+    <button class="btn btn-sm" ${to>=HIST.total?'disabled':''} onclick="HIST.offset+=HIST.limit;loadHistoryTab()">Next<i class="ti ti-chevron-right"></i></button></span>`;
+}
+
+async function exportHistoryExcel(){
+  const d=await api('GET','/api/audit?'+histQuery({limit:10000,offset:0}));
+  if(!d||!d.rows||!d.rows.length){notify('Nothing to export','err');return;}
+  const data=d.rows.map(r=>({'Date & Time':new Date(r.ts).toLocaleString('en-PK'),'User':r.username,'Register':HIST_MOD[r.module]||r.module,
+    'Action':HIST_ACT[r.action]?HIST_ACT[r.action][0]:r.action,'Tag':r.item_tag,'Item':r.item_name,'Company':r.company,
+    'Details':r.changes.map(c=>r.action==='edit'?`${c.f}: ${c.from||'(empty)'} → ${c.to||'(empty)'}`:`${c.f}: ${c.to||c.from}`).join(' | ')}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data),'Activity History');
+  XLSX.writeFile(wb,`asset-activity-history-${new Date().toISOString().slice(0,10)}.xlsx`);
+  notify(`Exported ${data.length} record(s)`);
+}
+
+// ── NON IT IMPORT (Excel / CSV) ──────────────────────────────
+let OAI_ROWS=[];
+const OAI_COL_MAP={
+  'item name':'name','item':'name','name':'name','asset name':'name','asset':'name','description':'name','particulars':'name','item description':'name',
+  'category':'category','asset type':'category','type':'category','group':'category','item type':'category',
+  'asset tag':'asset_tag','tag':'asset_tag','tag no':'asset_tag','tag number':'asset_tag','asset id':'asset_tag','asset code':'asset_tag','code':'asset_tag','asset no':'asset_tag',
+  'quantity':'quantity','qty':'quantity','units':'quantity','count':'quantity','no of units':'quantity',
+  'serial':'serial_no','serial no':'serial_no','serial number':'serial_no','s/n':'serial_no','sn':'serial_no',
+  'company':'company','floor':'floor',
+  'location':'location','room':'location','area':'location','location / room':'location',
+  'assigned to':'assigned_to','assignee':'assigned_to','department':'assigned_to','user':'assigned_to','custodian':'assigned_to','assigned to / department':'assigned_to',
+  'status':'status','condition':'item_condition','item condition':'item_condition',
+  'vendor':'vendor','supplier':'vendor','vendor / supplier':'vendor','vendor name':'vendor',
+  'unit cost':'unit_cost','unit cost (pkr)':'unit_cost','cost':'unit_cost','price':'unit_cost','unit price':'unit_cost','purchase price':'unit_cost','purchase price (pkr)':'unit_cost',
+  'purchase date':'purchase_date','date of purchase':'purchase_date',
+  'warranty expiry':'warranty_expiry','warranty':'warranty_expiry','warranty expiry date':'warranty_expiry','warranty end':'warranty_expiry',
+  'notes':'notes','remarks':'notes','comments':'notes','note':'notes'
+};
+function oaiDate(v){
+  if(v instanceof Date&&!isNaN(v))return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;
+  const t=String(v==null?'':v).trim();if(!t)return '';
+  if(/^\d{4}-\d{2}-\d{2}/.test(t))return t.slice(0,10);
+  const m=t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);   // dd/mm/yyyy (Pakistan format)
+  if(m)return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return '';
+}
+function oaiPick(val,list,syn,def){
+  const t=String(val||'').trim().toLowerCase();if(!t)return def;
+  const exact=list.find(x=>x.toLowerCase()===t);if(exact)return exact;
+  for(const [k,v] of Object.entries(syn)){if(t.includes(k))return v;}
+  return null;
+}
+const OAI_STATUS_SYN={'active':'In Use','allot':'In Use','allocat':'In Use','in use':'In Use','using':'In Use','spare':'Spare / Stored','free':'Spare / Stored','stor':'Spare / Stored','avail':'Spare / Stored','repair':'Under Repair','fault':'Under Repair','broken':'Under Repair','dispos':'Disposed','retire':'Disposed','scrap':'Disposed','sold':'Disposed'};
+const OAI_COND_SYN={'new':'New','good':'Good','ok':'Good','fair':'Fair','average':'Fair','poor':'Poor','bad':'Poor','damag':'Poor'};
+
+function oaiMapRow(raw){
+  const o={};
+  for(const [k,v] of Object.entries(raw)){
+    const f=OAI_COL_MAP[(k||'').toString().toLowerCase().trim()];if(!f)continue;
+    if(f==='purchase_date'||f==='warranty_expiry')o[f]=oaiDate(v);
+    else o[f]=v==null?'':String(v).trim();
+  }
+  return o;
+}
+
+function openOfficeImport(){
+  document.getElementById('modal-root').innerHTML=`
+  <div class="modal-overlay" id="mo"><div class="modal">
+    <div class="modal-header">
+      <div class="modal-hicon" style="background:#e0f7fa;color:#0e7490"><i class="ti ti-table-import"></i></div>
+      <div class="modal-title">Import Non IT Assets from Excel / CSV</div>
+      <button class="btn btn-sm btn-icon" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="oai-step-1">
+        <div class="imp-hint">
+          <strong>Accepted:</strong> .xlsx · .xls · .csv · Max 10MB<br>
+          Column headers are flexible — "Item", "Item Name", "Asset Name" all work.<br>
+          <strong>Required column:</strong> Item Name &nbsp;·&nbsp;
+          <a href="#" onclick="event.preventDefault();downloadOfficeTemplate()">⬇ Download template</a>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px 14px">
+          <i class="ti ti-building" style="font-size:18px;color:#0e7490;flex-shrink:0"></i>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Target Company</div>
+            <select id="oai-company" style="width:100%;height:34px;border:1px solid var(--border2);border-radius:7px;padding:0 10px;font-size:13px;background:var(--surface);color:var(--text)">
+              <option value="">— Use company from file (per row) —</option>
+              ${DATA.companies.map(c=>`<option value="${oaEsc(c)}">${oaEsc(c)}</option>`).join('')}
+            </select>
+          </div>
+          <div style="font-size:11px;color:var(--text3);max-width:170px;line-height:1.5">Select a company for <em>all</em> rows, or leave blank to use each row's Company column (blank = common to all).</div>
+        </div>
+        <div class="imp-drop" id="oai-drop" onclick="document.getElementById('oai-file').click()">
+          <div class="imp-drop-icon"><i class="ti ti-upload"></i></div>
+          <div class="imp-drop-text">Click to choose file or drag &amp; drop</div>
+          <div class="imp-drop-sub">.xlsx &nbsp;·&nbsp; .xls &nbsp;·&nbsp; .csv</div>
+          <input type="file" id="oai-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleOfficeImportFile(this.files[0])">
+        </div>
+        <div id="oai-status" style="font-size:13px;color:var(--text2);min-height:20px;margin-top:8px"></div>
+      </div>
+
+      <div id="oai-step-2" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;background:#e0f7fa;border:1px solid #b2ebf2;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px">
+          <i class="ti ti-building" style="color:#0e7490"></i><span id="oai-banner" style="flex:1;color:#006064"></span>
+          <button class="btn btn-sm" onclick="resetOfficeImport()" style="font-size:11px;height:24px;padding:0 8px">Change</button>
+        </div>
+        <div class="imp-chips" id="oai-chips"></div>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;margin-bottom:12px">
+          <input type="checkbox" id="oai-overwrite"> Overwrite existing items with the same Asset Tag / Serial No
+        </label>
+        <div class="imp-preview" id="oai-preview"></div>
+        <div class="modal-footer" style="padding:0;border:none;margin-top:12px">
+          <button class="btn" onclick="resetOfficeImport()">← Back</button>
+          <button class="btn" style="background:#0e7490;color:#fff;border-color:#0e7490" id="oai-commit" onclick="commitOfficeImport()"><i class="ti ti-check"></i> Import Items</button>
+        </div>
+      </div>
+
+      <div id="oai-step-3" style="display:none">
+        <div id="oai-result"></div>
+        <div class="modal-footer" style="padding:0;border:none;margin-top:14px">
+          <button class="btn" onclick="resetOfficeImport()">Import more</button>
+          <button class="btn btn-primary" onclick="closeModal();loadOfficeTab()">View items</button>
+        </div>
+      </div>
+    </div>
+  </div></div>`;
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target.id==='mo')closeModal();});
+  const dz=document.getElementById('oai-drop');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleOfficeImportFile(e.dataTransfer.files[0]);});
+}
+
+function resetOfficeImport(){
+  OAI_ROWS=[];
+  const show=(id,on)=>{const e=document.getElementById(id);if(e)e.style.display=on?'':'none';};
+  show('oai-step-1',true);show('oai-step-2',false);show('oai-step-3',false);
+  const st=document.getElementById('oai-status');if(st)st.textContent='';
+  const fi=document.getElementById('oai-file');if(fi)fi.value='';
+}
+
+function handleOfficeImportFile(file){
+  if(!file)return;
+  const st=document.getElementById('oai-status');
+  if(file.size>10*1024*1024){st.textContent='❌ File is larger than 10MB.';return;}
+  st.textContent=`📄 ${file.name} (${(file.size/1024).toFixed(1)} KB) — reading…`;
+  const ext=file.name.split('.').pop().toLowerCase();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let rows=[];
+      if(ext==='csv'){rows=parseImpCSV(e.target.result);}
+      else{
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      }
+      if(!rows.length){st.textContent='❌ File is empty or could not be read.';return;}
+      if(rows.length>5000){st.textContent='❌ Maximum 5000 rows per import — please split the file.';return;}
+      st.textContent='';
+      buildOfficeImportPreview(rows);
+    }catch(err){st.textContent='❌ Error reading file: '+err.message;}
+  };
+  if(ext==='csv')reader.readAsText(file);else reader.readAsArrayBuffer(file);
+}
+
+function buildOfficeImportPreview(rawRows){
+  const forced=document.getElementById('oai-company').value;
+  const coMap=Object.fromEntries(DATA.companies.map(c=>[c.toLowerCase(),c]));
+  const seenTags=new Set(OFFICE.items.map(i=>(i.asset_tag||'').toLowerCase()).filter(Boolean));
+  const seenSer=new Set(OFFICE.items.map(i=>(i.serial_no||'').toLowerCase()).filter(Boolean));
+  const rows=rawRows.map(oaiMapRow).filter(r=>Object.keys(r).length);
+  if(!rows.length){document.getElementById('oai-status').textContent='❌ No recognised columns found. Download the template to see the expected headers.';return;}
+  OAI_ROWS=rows.map(r=>{
+    const notes=[];let status='new';
+    if(!r.name)return{...r,_status:'err',_msg:'Missing Item Name'};
+    // category
+    let cat=OA_CATEGORIES.find(c=>c.toLowerCase()===String(r.category||'').trim().toLowerCase());
+    if(!cat&&r.category){
+      cat=r.category.length<3?null:OA_CATEGORIES.find(c=>c!=='Other'&&(c.toLowerCase().includes(r.category.toLowerCase())||r.category.toLowerCase().includes(c.toLowerCase().split(' ')[0])));
+      if(!cat){r.notes=(r.notes?r.notes+' | ':'')+'Category: '+r.category;cat='Other';notes.push('Category → Other');}
+    }
+    r.category=cat||'Other';
+    // status / condition
+    const st=oaiPick(r.status,OA_STATUS,OAI_STATUS_SYN,'In Use');
+    if(st===null){notes.push(`Status "${r.status}" → In Use`);r.status='In Use';}else r.status=st;
+    const cd=oaiPick(r.item_condition,OA_COND,OAI_COND_SYN,'Good');
+    if(cd===null){notes.push(`Condition "${r.item_condition}" → Good`);r.item_condition='Good';}else r.item_condition=cd;
+    // quantity & cost
+    const q=parseInt(String(r.quantity||'').replace(/[^\d]/g,''));r.quantity=q>=1?q:1;
+    if(r.unit_cost!==undefined&&r.unit_cost!==''){const c=Number(String(r.unit_cost).replace(/[^\d.]/g,''));r.unit_cost=isNaN(c)?'':c;}
+    // company
+    if(forced)r.company=forced;
+    else if(r.company){const m=coMap[String(r.company).toLowerCase()];if(m)r.company=m;else{notes.push(`Company "${r.company}" not found → common`);r.company='';}}
+    // duplicates (existing or earlier in this file)
+    const t=(r.asset_tag||'').toLowerCase(),s=(r.serial_no||'').toLowerCase();
+    if((t&&seenTags.has(t))||(s&&seenSer.has(s)))status='dup';
+    if(t)seenTags.add(t);if(s)seenSer.add(s);
+    return{...r,_status:status,_msg:status==='dup'?'Tag / serial exists':(notes.join('; ')||'Ready')};
+  });
+  const n=s=>OAI_ROWS.filter(r=>r._status===s).length;
+  document.getElementById('oai-chips').innerHTML=`
+    <div class="imp-chip"><div class="imp-chip-num">${OAI_ROWS.length}</div><div class="imp-chip-lbl">Total rows</div></div>
+    <div class="imp-chip c-new"><div class="imp-chip-num">${n('new')}</div><div class="imp-chip-lbl">New items</div></div>
+    <div class="imp-chip c-skip"><div class="imp-chip-num">${n('dup')}</div><div class="imp-chip-lbl">Duplicates</div></div>
+    <div class="imp-chip c-err"><div class="imp-chip-num">${n('err')}</div><div class="imp-chip-lbl">Errors</div></div>`;
+  const cols=['name','category','quantity','asset_tag','location','assigned_to','status','company'];
+  const lbls=['Item','Category','Qty','Tag','Location','Assigned To','Status','Company'];
+  const tag={new:'<span class="imp-tag imp-tag-new">NEW</span>',dup:'<span class="imp-tag imp-tag-dup">DUP</span>',err:'<span class="imp-tag imp-tag-err">ERR</span>'};
+  const rc={new:'imp-row-new',dup:'imp-row-dup',err:'imp-row-err'};
+  document.getElementById('oai-preview').innerHTML=`<table><thead><tr><th>Status</th>${lbls.map(l=>`<th>${l}</th>`).join('')}<th>Note</th></tr></thead>
+    <tbody>${OAI_ROWS.map(r=>`<tr class="${rc[r._status]}"><td>${tag[r._status]}</td>${cols.map(c=>`<td>${oaEsc(r[c]||'—')}</td>`).join('')}<td style="color:var(--text3);font-size:11px">${oaEsc(r._msg)}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('oai-banner').innerHTML=forced?`Importing all items into: <strong>${oaEsc(forced)}</strong>`:`Using the <strong>Company column from the file</strong> per row (blank = common to all)`;
+  document.getElementById('oai-step-1').style.display='none';
+  document.getElementById('oai-step-2').style.display='';
+}
+
+async function commitOfficeImport(){
+  const overwrite=document.getElementById('oai-overwrite').checked;
+  const btn=document.getElementById('oai-commit');
+  const rows=OAI_ROWS.filter(r=>r._status!=='err'&&(r._status==='new'||overwrite)).map(({_status,_msg,...x})=>x);
+  const invalid=OAI_ROWS.filter(r=>r._status==='err').length;
+  const dupSkipped=OAI_ROWS.filter(r=>r._status==='dup').length-(overwrite?OAI_ROWS.filter(r=>r._status==='dup').length:0);
+  if(!rows.length){notify('Nothing to import','err');return;}
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Importing…';
+  const r=await api('POST','/api/office-assets/import',{rows,overwrite});
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Import Items';
+  if(!r||!r.success){notify((r&&r.error)||'Import failed','err');return;}
+  document.getElementById('oai-result').innerHTML=`
+    <div style="background:var(--success-light);border-radius:12px;padding:24px;text-align:center">
+      <div style="font-size:32px;margin-bottom:10px">✅</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:8px">Import complete!</div>
+      <div style="font-size:13px;color:var(--text2);line-height:2">
+        <strong style="color:var(--success)">${r.inserted}</strong> new items added &nbsp;·&nbsp;
+        <strong style="color:#0e7490">${r.updated}</strong> updated &nbsp;·&nbsp;
+        <strong style="color:var(--warning)">${dupSkipped+r.skipped}</strong> duplicates skipped &nbsp;·&nbsp;
+        <strong style="color:var(--danger)">${invalid+r.invalid}</strong> invalid rows
+      </div>
+    </div>`;
+  document.getElementById('oai-step-2').style.display='none';
+  document.getElementById('oai-step-3').style.display='';
+  notify(`${r.inserted} items added, ${r.updated} updated`);
+}
+
+function downloadOfficeTemplate(){
+  const headers=['Item Name','Category','Asset Tag','Quantity','Serial No','Company','Floor','Location','Assigned To','Status','Condition','Vendor','Unit Cost (PKR)','Purchase Date','Warranty Expiry','Notes'];
+  const ex1=['Executive Office Chair','Furniture','','10','','MyCompany','Ground Floor','Reception','Admin Department','In Use','Good','Interwood','28500','2024-03-15','2026-03-15','Black leather'];
+  const ex2=['Split AC 1.5 Ton','Air Conditioning / HVAC','AC-001','1','SN-AC-7788','MyCompany','1st Floor','Meeting Room','','In Use','New','Gree Pakistan','135000','2025-05-10','2030-05-10',''];
+  const ws=XLSX.utils.aoa_to_sheet([headers,ex1,ex2]);ws['!cols']=headers.map(()=>({wch:22}));
+  const opts=[['Categories','Status','Condition'],...Array.from({length:Math.max(OA_CATEGORIES.length,OA_STATUS.length,OA_COND.length)},(_,i)=>[OA_CATEGORIES[i]||'',OA_STATUS[i]||'',OA_COND[i]||''])];
+  const ws2=XLSX.utils.aoa_to_sheet(opts);ws2['!cols']=[{wch:28},{wch:18},{wch:12}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Non IT Import Template');XLSX.utils.book_append_sheet(wb,ws2,'Allowed Values');
+  XLSX.writeFile(wb,'Non_IT_Asset_Import_Template.xlsx');notify('Template downloaded');
 }
 
 // ── BOOT CHECK ──
@@ -3010,7 +3370,7 @@ function mapImpRow(raw){
   for(const [k,v] of Object.entries(raw)){
     const key=(k||'').toString().toLowerCase().trim();
     const field=IMP_COL_MAP[key];
-    if(field) out[field]=v===null||v===undefined?'':String(v).trim();
+    if(field) out[field]=(field==='purchaseDate')?oaiDate(v):(v===null||v===undefined?'':String(v).trim());
   }
   return out;
 }
@@ -3128,16 +3488,44 @@ function downloadImportTemplate(){
     'Location','Floor','Status','Assigned To','Last Assigned To',
     'Vendor','Vendor Contact','Purchase Price (PKR)','Current Market Value (PKR)',
     'Purchase Date','Notes'];
-  const example=['Dell','OptiPlex 7090','CPU','Core i7 10th Gen, 512GB SSD, Win 11 Pro',
-    'Intel UHD 630','16GB DDR4','512GB NVMe','1TB HDD',
-    'SN-ABC123','LCD-001','LCD-002','SYS-001','','MyCompany',
-    'Main Office','Ground Floor','Free / Spare','','',
-    'Al-Fatah Electronics','0300-1234567','85000','60000',
-    '2024-01-15','Good condition'];
-  const ws=XLSX.utils.aoa_to_sheet([headers,example]);
+  const co=DATA.companies[0]||'MyCompany';
+  const ex=[
+    ['Dell','OptiPlex 7090','CPU','Core i7 10th Gen, 512GB SSD, Win 11 Pro','Intel UHD 630','16GB DDR4','512GB NVMe','1TB HDD',
+     'SN-EXAMPLE-001','','','SYS-001','',co,'Main Office','Ground Floor','Free / Spare','','',
+     'Al-Fatah Electronics','0300-1234567','85000','60000','2024-01-15','Example row — delete before importing'],
+    ['Dell','P2422H 24"','LCD','','','','','',
+     'SN-EXAMPLE-002','LCD-001','LCD-002','','',co,'Main Office','1st Floor','Allotted','Ali Khan','',
+     'Al-Fatah Electronics','0300-1234567','32000','24000','2024-03-15','Example row — delete before importing'],
+    ['Apple','MacBook Pro 14"','MacBook Pro','M3 Pro, 512GB','','18GB','512GB','',
+     'SN-EXAMPLE-003','','','SYS-003','',co,'Studio','Ground Floor','Allotted','Sara Ahmed','',
+     'iStore','0321-7654321','650000','560000','2025-02-01','Example row — delete before importing']
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...ex]);
   ws['!cols']=headers.map(()=>({wch:22}));
+  ws['!freeze']={xSplit:0,ySplit:1};
+
+  const info=[
+    ['IT Asset Import — Instructions'],[''],
+    ['1. Fill one asset per row on the "Asset Import Template" sheet. Delete the 3 example rows first.'],
+    ['2. Required columns: Brand and Model. Everything else is optional.'],
+    ['3. Column names are flexible (e.g. "Make" = Brand, "Memory" = RAM) but keep this order if unsure.'],
+    ['4. Type, Status, Location and Floor should use the values listed on the "Allowed Values" sheet.'],
+    ['5. Company: pick a company that already exists, or choose one in the import window to apply it to every row.'],
+    ['6. Purchase Date: use YYYY-MM-DD (e.g. 2024-01-15) or 15/03/2024; real Excel date cells also work.'],
+    ['7. Serial No should be unique. Rows whose Serial No already exists are skipped unless you tick "Overwrite" in the import window.'],
+    ['8. Upload the file with "Import Excel" on the IT Asset Register screen. You will see a preview before anything is saved.']
+  ];
+  const wsI=XLSX.utils.aoa_to_sheet(info);wsI['!cols']=[{wch:120}];
+
+  const lists=[['Type','Brand','Status','Location','Floor','Company'],
+    ...Array.from({length:Math.max(ASSET_TYPES.length,BRANDS.length,STATUS_LIST.length,LOCATIONS.length,FLOORS.length,DATA.companies.length)},
+      (_,i)=>[ASSET_TYPES[i]||'',BRANDS[i]||'',STATUS_LIST[i]||'',LOCATIONS[i]||'',FLOORS[i]||'',DATA.companies[i]||''])];
+  const wsL=XLSX.utils.aoa_to_sheet(lists);wsL['!cols']=[{wch:22},{wch:16},{wch:16},{wch:18},{wch:16},{wch:22}];
+
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Asset Import Template');
+  XLSX.utils.book_append_sheet(wb,wsI,'Instructions');
+  XLSX.utils.book_append_sheet(wb,wsL,'Allowed Values');
   XLSX.writeFile(wb,'IT_Asset_Import_Template.xlsx');
   notify('Template downloaded');
 }
